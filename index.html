@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Responsive Timetable</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='10' y='12' width='44' height='42' rx='10' fill='%231e4bd8'/%3E%3Cpath d='M20 26h24v6H20zm0 12h16v6H20z' fill='white'/%3E%3Cpath d='M22 10v8M42 10v8' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <button class="settings-btn" id="settingsBtn" type="button" aria-label="Open settings">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path fill="currentColor" d="M19.14,12.94a7.49,7.49,0,0,0,.05-.94,7.49,7.49,0,0,0-.05-.94l2.11-1.65a.5.5,0,0,0,.12-.64l-2-3.46a.5.5,0,0,0-.6-.22l-2.49,1a7.28,7.28,0,0,0-1.63-.94l-.38-2.65A.5.5,0,0,0,13.8,2H10.2a.5.5,0,0,0-.49.42L9.33,5.07a7.28,7.28,0,0,0-1.63.94l-2.49-1a.5.5,0,0,0-.6.22l-2,3.46a.5.5,0,0,0,.12.64L4.86,11.06a7.49,7.49,0,0,0-.05.94,7.49,7.49,0,0,0,.05.94L2.75,14.59a.5.5,0,0,0-.12.64l2,3.46a.5.5,0,0,0,.6.22l2.49-1a7.28,7.28,0,0,0,1.63.94l.38,2.65a.5.5,0,0,0,.49.42h3.6a.5.5,0,0,0,.49-.42l.38-2.65a7.28,7.28,0,0,0,1.63-.94l2.49,1a.5.5,0,0,0,.6-.22l2-3.46a.5.5,0,0,0-.12-.64ZM12,15.5A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"/>
+      </svg>
+    </button>
+    <button class="home-btn" id="homeBtn" type="button" aria-label="Open home">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path fill="currentColor" d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3l9-8z"/>
+      </svg>
+    </button>
+    <div class="header-stack">
+      <div class="clock" id="clock">--:--</div>
+      <div class="current-card" id="currentCard">
+        <div class="current-title" id="currentTitle">--</div>
+        <div class="current-sub" id="currentSub">--</div>
+      </div>
+      <div id="status">Loading</div>
+      <div class="subline" id="periodMeta">--</div>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-meta" id="progressMeta">--</div>
+  </div>
+  <div class="table-wrapper">
+    <table id="table"></table>
+  </div>
+</div>
+
+<div class="settings-backdrop" id="settingsBackdrop" aria-hidden="true"></div>
+<aside class="settings-drawer" id="settingsDrawer" aria-hidden="true">
+  <div class="settings-header">
+    <div class="settings-title">Settings</div>
+    <button class="settings-close" id="settingsClose" type="button" aria-label="Close settings">Close</button>
+  </div>
+  <div class="settings-body">
+    <div class="settings-section">
+      <div class="settings-section-title">Account</div>
+      <div class="auth-status" id="authStatus">Not signed in</div>
+      <div class="auth-form" id="authForm">
+        <input class="auth-input" id="authEmail" type="email" placeholder="Email" autocomplete="email">
+        <input class="auth-input" id="authPassword" type="password" placeholder="Password" autocomplete="current-password">
+        <div class="auth-actions">
+          <button class="auth-btn" id="loginBtn" type="button">Login</button>
+          <button class="auth-btn secondary" id="signupBtn" type="button">Sign up</button>
+        </div>
+      </div>
+      <div class="profile-form" id="profileForm">
+        <div class="profile-grid">
+          <input class="auth-input profile-wide" id="profileUsername" type="text" placeholder="Username (unique, lowercase)" autocomplete="nickname">
+          <input class="auth-input" id="profileDept" type="text" placeholder="Dept (e.g., CSE)">
+          <input class="auth-input" id="profileYear" type="text" placeholder="Year (e.g., III)">
+          <input class="auth-input" id="profileSem" type="text" placeholder="Sem (e.g., V)">
+          <select class="auth-input" id="profileRole">
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+          </select>
+        </div>
+        <div class="auth-actions">
+          <button class="auth-btn" id="saveProfileBtn" type="button">Save profile</button>
+          <button class="auth-btn secondary" id="logoutBtn" type="button">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-text">
+        <div class="setting-name">Dark mode</div>
+        <div class="setting-desc">Smooth premium theme</div>
+      </div>
+      <button class="toggle" id="themeToggle" type="button" aria-label="Toggle theme">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </button>
+    </div>
+    <div class="setting-row">
+      <div class="setting-text">
+        <div class="setting-name">Vibrate</div>
+        <div class="setting-desc">Double vibration on period change</div>
+      </div>
+      <button class="toggle" id="vibrateToggle" type="button" aria-label="Toggle vibration">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </button>
+    </div>
+    <div class="setting-row">
+      <div class="setting-text">
+        <div class="setting-name">Notifications</div>
+        <div class="setting-desc">Notify on period change</div>
+      </div>
+      <button class="toggle" id="notifyToggle" type="button" aria-label="Toggle notifications">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </button>
+    </div>
+    <div class="setting-row">
+      <div class="setting-text">
+        <div class="setting-name">Edit periods</div>
+        <div class="setting-desc">Tap a subject cell to rename it</div>
+      </div>
+      <button class="toggle" id="editToggle" type="button" aria-label="Toggle edit periods">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Timetable</div>
+      <div class="settings-hint" id="syncHint">Login to save and sync your timetable</div>
+      <div class="auth-actions">
+        <button class="auth-btn" id="savePersonalBtn" type="button">Save personal</button>
+        <button class="auth-btn secondary" id="publishClassBtn" type="button">Publish to class</button>
+        <button class="auth-btn secondary" id="viewStudentsBtn" type="button">View students</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<section class="home-screen" id="homeScreen" aria-hidden="true">
+  <div class="home-topbar">
+    <button class="home-back" id="homeBack" type="button" aria-label="Back to timetable">Back</button>
+    <div class="home-title">Published timetables</div>
+    <button class="home-refresh" id="homeRefresh" type="button" aria-label="Refresh published timetables">Refresh</button>
+  </div>
+  <div class="home-controls">
+    <input class="home-search" id="homeSearch" type="search" placeholder="Search dept / year / sem" autocomplete="off">
+    <select class="home-sort" id="homeSort" aria-label="Sort published timetables">
+      <option value="recent">Recent</option>
+      <option value="dept">Department</option>
+      <option value="year">Year</option>
+      <option value="sem">Semester</option>
+    </select>
+  </div>
+  <div class="home-meta" id="homeMeta">--</div>
+  <div class="home-list" id="homeList"></div>
+</section>
+
+<section class="home-screen" id="studentsScreen" aria-hidden="true">
+  <div class="home-topbar">
+    <button class="home-back" id="studentsBack" type="button" aria-label="Back to timetable">Back</button>
+    <div class="home-title">Students</div>
+    <button class="home-refresh" id="studentsRefresh" type="button" aria-label="Refresh students">Refresh</button>
+  </div>
+  <div class="home-controls">
+    <input class="home-search" id="studentsSearch" type="search" placeholder="Search username / email" autocomplete="off">
+    <select class="home-sort" id="studentsSort" aria-label="Sort students">
+      <option value="username">Username</option>
+      <option value="email">Email</option>
+    </select>
+  </div>
+  <div class="home-meta" id="studentsMeta">--</div>
+  <div class="home-list" id="studentsList"></div>
+</section>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
