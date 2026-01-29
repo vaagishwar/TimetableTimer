@@ -56,6 +56,10 @@ body {
   padding: 0;
 }
 
+.app {
+  padding-bottom: 76px;
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -130,6 +134,153 @@ body {
   background: rgba(120, 120, 120, 0.16);
 }
 
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  z-index: 40;
+}
+
+.nav-item {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.nav-item span {
+  font-size: 12px;
+}
+
+.nav-item.active {
+  color: var(--blue);
+}
+
+.nav-item svg {
+  display: block;
+}
+
+.profile-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 35;
+  display: none;
+  grid-template-rows: auto 1fr;
+}
+
+.profile-screen.show {
+  display: grid;
+}
+
+.profile-topbar {
+  padding: 16px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-title {
+  font-size: 22px;
+  font-weight: 1000;
+}
+
+.profile-settings {
+  border: 1px solid var(--border);
+  background: rgba(120, 120, 120, 0.12);
+  padding: 12px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.profile-wrap {
+  padding: 0 16px 96px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  display: grid;
+  gap: 14px;
+}
+
+.profile-hero {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow2);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.profile-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  background: rgba(30, 75, 216, 0.12);
+  border: 1px solid rgba(30, 75, 216, 0.22);
+  display: grid;
+  place-items: center;
+  font-weight: 1000;
+  font-size: 22px;
+  color: var(--blue);
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 1000;
+}
+
+.profile-sub {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.profile-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow2);
+  padding: 14px;
+}
+
+.profile-card-title {
+  font-size: 14px;
+  font-weight: 1000;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 700px) {
+  .nav-item span {
+    font-size: 14px;
+  }
+  .profile-title {
+    font-size: 26px;
+  }
+  .profile-name {
+    font-size: 22px;
+  }
+  .profile-sub {
+    font-size: 16px;
+  }
+}
+
 .current-card {
   display: none;
   width: min(520px, 92vw);
@@ -184,15 +335,12 @@ body {
 
 @media (max-width: 700px) {
   .settings-drawer {
-    top: auto;
-    right: 0;
-    left: 0;
-    bottom: 0;
+    inset: 0;
     width: 100vw;
-    height: 92vh;
+    height: 100vh;
     border-left: none;
     border-top: 1px solid var(--border);
-    border-radius: 18px 18px 0 0;
+    border-radius: 0;
     transform: translateY(110%);
     transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
   }
@@ -206,12 +354,13 @@ body {
   }
 
   .settings-title {
-    font-size: 18px;
+    font-size: 22px;
   }
 
   .settings-close {
     padding: 10px 14px;
     border-radius: 14px;
+    font-size: 16px;
   }
 }
 
@@ -254,42 +403,42 @@ body {
 
 @media (max-width: 700px) {
   .home-title {
-    font-size: 18px;
+    font-size: 30px;
   }
 
   .home-topbar {
-    padding: 16px 14px 12px;
+    padding: 22px 16px 16px;
   }
 
   .home-search,
   .home-sort {
-    font-size: 15px;
-    padding: 14px 14px;
-    border-radius: 18px;
+    font-size: 22px;
+    padding: 20px 18px;
+    border-radius: 20px;
   }
 
   .home-back,
   .home-refresh {
-    padding: 12px 14px;
-    border-radius: 16px;
-    font-size: 14px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    font-size: 18px;
   }
 
   .home-item {
-    padding: 16px 14px;
+    padding: 22px 18px;
   }
 
   .home-item-title {
-    font-size: 16px;
+    font-size: 26px;
   }
 
   .home-item-sub {
-    font-size: 13px;
+    font-size: 18px;
   }
 
   .home-item-chip {
-    font-size: 13px;
-    padding: 9px 11px;
+    font-size: 17px;
+    padding: 12px 14px;
   }
 }
 
@@ -426,6 +575,79 @@ body {
   border: 1px solid rgba(30, 75, 216, 0.28);
   background: rgba(30, 75, 216, 0.10);
   white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .home-title {
+    font-size: 30px;
+  }
+
+  .home-topbar {
+    padding: 22px 16px 16px;
+  }
+
+  .home-back,
+  .home-refresh {
+    padding: 16px 18px;
+    border-radius: 18px;
+    font-size: 18px;
+  }
+
+  .home-controls {
+    padding: 0 16px 16px;
+    gap: 14px;
+  }
+
+  .home-search,
+  .home-sort {
+    font-size: 22px;
+    padding: 20px 18px;
+    border-radius: 20px;
+  }
+
+  .home-meta {
+    padding: 0 16px 16px;
+    font-size: 18px;
+  }
+
+  .home-list {
+    padding: 0 16px 24px;
+    gap: 16px;
+  }
+
+  .home-group {
+    border-radius: 22px;
+  }
+
+  .home-group-head {
+    padding: 18px 18px 14px;
+  }
+
+  .home-group-title {
+    font-size: 22px;
+  }
+
+  .home-group-sub {
+    font-size: 16px;
+  }
+
+  .home-item {
+    padding: 22px 18px;
+    gap: 14px;
+  }
+
+  .home-item-title {
+    font-size: 26px;
+  }
+
+  .home-item-sub {
+    font-size: 18px;
+  }
+
+  .home-item-chip {
+    font-size: 17px;
+    padding: 12px 14px;
+  }
 }
 
 .settings-header {
@@ -826,11 +1048,11 @@ td.editing::after {
   }
   .settings-btn,
   .home-btn {
-    padding: 12px;
-    border-radius: 14px;
+    padding: 16px;
+    border-radius: 16px;
   }
   .clock {
-    font-size: 28px;
+    font-size: 40px;
   }
   .current-card {
     display: block;
@@ -838,11 +1060,23 @@ td.editing::after {
   #status {
     display: none;
   }
+  .current-title {
+    font-size: 26px;
+  }
+  .current-sub {
+    font-size: 18px;
+  }
+  .subline {
+    font-size: 18px;
+  }
   th, td {
-    padding: 12px 10px;
-    font-size: 15px;
+    padding: 8px;
+    font-size: 13px;
   }
   .progress-wrap {
     padding: 10px 12px 12px;
+  }
+  .progress-meta {
+    font-size: 18px;
   }
 }

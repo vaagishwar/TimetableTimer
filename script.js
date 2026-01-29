@@ -47,6 +47,17 @@ let editingCell = null;
 let editingKey = null;
 let editingOriginal = null;
 
+let homeUI = {
+  open: null,
+  close: null
+};
+
+let navUI = {
+  showHome: null,
+  showProfile: null,
+  showSearch: null
+};
+
 let published = {
   loadedAt: 0,
   items: [],
@@ -196,10 +207,10 @@ async function refreshAuthState() {
     return;
   }
 
-  setAuthUI(fb.user);
   await loadProfile();
   applyProfileToInputs();
   await loadCloudTimetables();
+  setAuthUI(fb.user);
 }
 
 function setAuthUI(user) {
@@ -207,6 +218,9 @@ function setAuthUI(user) {
   const authForm = document.getElementById("authForm");
   const profileForm = document.getElementById("profileForm");
   const editToggle = document.getElementById("editToggle");
+  const profileName = document.getElementById("profileName");
+  const profileSub = document.getElementById("profileSub");
+  const profileAvatar = document.getElementById("profileAvatar");
 
   if (!authStatus || !authForm || !profileForm) return;
 
@@ -214,12 +228,22 @@ function setAuthUI(user) {
     authStatus.textContent = "Not signed in";
     authForm.style.display = "grid";
     profileForm.style.display = "none";
+    if (profileName) profileName.textContent = "Your profile";
+    if (profileSub) profileSub.textContent = "Not signed in";
+    if (profileAvatar) profileAvatar.textContent = "U";
     return;
   }
 
   authStatus.textContent = `Signed in: ${user.email || user.uid}`;
   authForm.style.display = "none";
   profileForm.style.display = "grid";
+
+  const email = String(user.email || "");
+  const fallbackName = email ? email.split("@")[0] : "Account";
+  const displayName = (fb.profile && fb.profile.username) ? fb.profile.username : fallbackName;
+  if (profileName) profileName.textContent = displayName;
+  if (profileSub) profileSub.textContent = email || user.uid;
+  if (profileAvatar) profileAvatar.textContent = String(displayName || "U").slice(0, 1).toUpperCase();
 }
 
 async function loadProfile() {
@@ -853,6 +877,7 @@ function init() {
   loadSettings();
   loadTimetable();
   buildTable();
+  initNav();
   initDrawer();
   initHome();
   initStudents();
@@ -897,14 +922,13 @@ function init() {
 }
 
 function initHome() {
-  const homeBtn = document.getElementById("homeBtn");
   const homeScreen = document.getElementById("homeScreen");
   const homeBack = document.getElementById("homeBack");
   const homeRefresh = document.getElementById("homeRefresh");
   const homeSearch = document.getElementById("homeSearch");
   const homeSort = document.getElementById("homeSort");
 
-  if (!homeBtn || !homeScreen) return;
+  if (!homeScreen) return;
 
   function openHome() {
     homeScreen.classList.add("show");
@@ -912,14 +936,17 @@ function initHome() {
     if (homeSort) homeSort.value = published.sort;
     if (homeSearch) homeSearch.value = published.query;
     refreshPublishedTimetables(false);
+    if (navUI.showSearch) navUI.showSearch();
   }
 
   function closeHome() {
     homeScreen.classList.remove("show");
     homeScreen.setAttribute("aria-hidden", "true");
+    if (navUI.showHome) navUI.showHome();
   }
 
-  homeBtn.addEventListener("click", () => openHome());
+  homeUI.open = openHome;
+  homeUI.close = closeHome;
   if (homeBack) homeBack.addEventListener("click", () => closeHome());
 
   if (homeRefresh) homeRefresh.addEventListener("click", async () => {
@@ -939,6 +966,65 @@ function initHome() {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") closeHome();
   });
+}
+
+function initNav() {
+  const app = document.querySelector(".app");
+  const profileScreen = document.getElementById("profileScreen");
+  const homeScreen = document.getElementById("homeScreen");
+  const navHome = document.getElementById("navHome");
+  const navSearch = document.getElementById("navSearch");
+  const navProfile = document.getElementById("navProfile");
+
+  if (!app || !profileScreen || !navHome || !navSearch || !navProfile) return;
+
+  function setActive(which) {
+    navHome.classList.toggle("active", which === "home");
+    navSearch.classList.toggle("active", which === "search");
+    navProfile.classList.toggle("active", which === "profile");
+  }
+
+  function showHome() {
+    app.style.display = "";
+    profileScreen.classList.remove("show");
+    profileScreen.setAttribute("aria-hidden", "true");
+    if (homeScreen) {
+      homeScreen.classList.remove("show");
+      homeScreen.setAttribute("aria-hidden", "true");
+    }
+    setActive("home");
+  }
+
+  function showProfile() {
+    app.style.display = "none";
+    profileScreen.classList.add("show");
+    profileScreen.setAttribute("aria-hidden", "false");
+    if (homeScreen) {
+      homeScreen.classList.remove("show");
+      homeScreen.setAttribute("aria-hidden", "true");
+    }
+    setActive("profile");
+  }
+
+  function showSearch() {
+    app.style.display = "";
+    profileScreen.classList.remove("show");
+    profileScreen.setAttribute("aria-hidden", "true");
+    setActive("search");
+  }
+
+  navUI.showHome = showHome;
+  navUI.showProfile = showProfile;
+  navUI.showSearch = showSearch;
+
+  navHome.addEventListener("click", () => showHome());
+  navProfile.addEventListener("click", () => showProfile());
+  navSearch.addEventListener("click", () => {
+    if (homeUI.open) homeUI.open();
+    else showSearch();
+  });
+
+  showHome();
 }
 
 function initStudents() {
@@ -1280,6 +1366,7 @@ function renderPublishedTimetables() {
           homeScreen.classList.remove("show");
           homeScreen.setAttribute("aria-hidden", "true");
         }
+        if (navUI.showHome) navUI.showHome();
       });
 
       itemsWrap.appendChild(btn);
@@ -1342,7 +1429,7 @@ function setToggleState(btn, on) {
 }
 
 function initDrawer() {
-  const btn = document.getElementById("settingsBtn");
+  const btn = document.getElementById("openSettingsBtn");
   const drawer = document.getElementById("settingsDrawer");
   const backdrop = document.getElementById("settingsBackdrop");
   const close = document.getElementById("settingsClose");
@@ -1356,7 +1443,7 @@ function initDrawer() {
   setToggleState(notifyToggle, settings.notify);
   setToggleState(editToggle, settings.edit);
 
-  btn.addEventListener("click", () => openDrawer());
+  if (btn) btn.addEventListener("click", () => openDrawer());
   close.addEventListener("click", () => closeDrawer());
   backdrop.addEventListener("click", () => closeDrawer());
   document.addEventListener("keydown", e => {
