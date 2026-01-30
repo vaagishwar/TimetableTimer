@@ -552,6 +552,16 @@ body {
   font-weight: 800;
 }
 
+#saveProfileBtn.is-unsaved {
+  border-color: rgba(255, 75, 75, 0.45);
+  background: rgba(255, 75, 75, 0.12);
+}
+
+#saveProfileBtn.is-saved {
+  border-color: rgba(30, 180, 90, 0.45);
+  background: rgba(30, 180, 90, 0.14);
+}
+
 .auth-btn.secondary {
   border-color: rgba(120, 120, 120, 0.28);
   background: rgba(120, 120, 120, 0.08);
@@ -835,8 +845,10 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: none 0.3s ease;
-  display: grid;
-  place-items: end center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
   padding: clamp(16px, 5vw, 32px);
   z-index: 40;
 }
@@ -846,15 +858,23 @@ body {
   pointer-events: auto;
 }
 
-.students-sheet > div {
-  background: var(--panel);
+.students-sheet > * {
   width: min(520px, 100%);
-  max-height: calc(100vh - 80px);
-  border-radius: 26px 26px 18px 18px;
-  overflow: hidden;
-  display: grid;
-  grid-template-rows: auto auto auto 1fr;
+  background: var(--panel);
+}
+
+.students-sheet > *:first-child {
+  border-radius: 26px 26px 0 0;
   box-shadow: 0 28px 60px rgba(15, 17, 20, 0.38);
+}
+
+.students-sheet > *:last-child {
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 28px 60px rgba(15, 17, 20, 0.38);
+}
+
+.students-sheet > * + * {
+  border-top: 1px solid var(--border);
 }
 
 .students-topbar {
@@ -916,6 +936,7 @@ body {
 .students-list {
   padding: 0 20px 24px;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
   display: grid;
   gap: 12px;
 }
@@ -983,10 +1004,16 @@ body {
 }
 
 @media (max-width: 700px) {
-  .students-sheet > div {
+  .students-sheet > * {
     width: 100%;
-    max-height: calc(100vh - 60px);
+  }
+
+  .students-sheet > *:first-child {
     border-radius: 30px 30px 0 0;
+  }
+
+  .students-sheet > *:last-child {
+    border-radius: 0 0 24px 24px;
   }
 
   .students-topbar {
@@ -1244,7 +1271,7 @@ td:first-child {
 }
 
 tr.today th:first-child {
-  background: rgb(223, 223, 223);position: sticky;
+  background: var(--bg);position: sticky;
   color: var(--text);
   font-weight: 700;
 }
@@ -1283,15 +1310,16 @@ tr.today td.active::after {
   content: "";
   position: absolute;
   inset: 0;
+  border: inset 10px rgba(41, 41, 41, 0.379);
   border-radius: 4px;
   background: rgba(67, 67, 67, 0.25);
   transform: scale(0.85);
   opacity: 0;
-  animation: activeRipple 3s ease-out infinite;
+  animation: ActiveRipple 4s ease-in-out infinite;
 }
 
 /* Keyframes */
-@keyframes activeRipple {
+@keyframes ActiveRipple {
   0% {
     transform: scale(1.85);
     opacity: 0.65;

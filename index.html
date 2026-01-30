@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Responsive Timetable</title>
+<title>Timetable Timer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='10' y='12' width='44' height='42' rx='10' fill='%231e4bd8'/%3E%3Cpath d='M20 26h24v6H20zm0 12h16v6H20z' fill='white'/%3E%3Cpath d='M22 10v8M42 10v8' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -82,9 +82,37 @@
         <div class="profile-form" id="profileForm">
           <div class="profile-grid">
             <input class="auth-input profile-wide" id="profileUsername" type="text" placeholder="Username (unique, lowercase)" autocomplete="nickname">
-            <input class="auth-input" id="profileDept" type="text" placeholder="Dept (e.g., CSE)">
-            <input class="auth-input" id="profileYear" type="text" placeholder="Year (e.g., III)">
-            <input class="auth-input" id="profileSem" type="text" placeholder="Sem (e.g., V)">
+            <select class="auth-input" id="profileDept" aria-label="Department">
+              <option value="">Dept</option>
+              <option value="CSE">CSE</option>
+              <option value="CSBS">CSBS</option>
+              <option value="IT">IT</option>
+              <option value="AIDS">AIDS</option>
+              <option value="CCE">CCE</option>
+              <option value="BME">BME</option>
+              <option value="EEE">EEE</option>
+              <option value="ICE">ICE</option>
+              <option value="CE">CE</option>
+              <option value="ME">ME</option>
+            </select>
+            <select class="auth-input" id="profileYear" aria-label="Year">
+              <option value="">Year</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
+            </select>
+            <select class="auth-input" id="profileSem" aria-label="Semester">
+              <option value="">Sem</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
+              <option value="V">V</option>
+              <option value="VI">VI</option>
+              <option value="VII">VII</option>
+              <option value="VIII">VIII</option>
+            </select>
             <select class="auth-input" id="profileRole">
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>

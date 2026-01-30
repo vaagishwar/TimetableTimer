@@ -54,6 +54,8 @@ let published = {
   sort: "recent"
 };
 
+let profileDirty = false;
+
 let currentTab = "tabHome";
 let activateTabFn = null;
 
@@ -142,6 +144,33 @@ function wireAuthButtons() {
   const logoutBtn = document.getElementById("logoutBtn");
   const saveProfileBtn = document.getElementById("saveProfileBtn");
 
+  const updateSaveProfileState = () => {
+    if (!saveProfileBtn) return;
+    saveProfileBtn.classList.toggle("is-unsaved", profileDirty);
+    saveProfileBtn.classList.toggle("is-saved", !profileDirty);
+  };
+
+  const markProfileDirty = () => {
+    profileDirty = true;
+    updateSaveProfileState();
+  };
+
+  const wireProfileDirtyListeners = () => {
+    const username = document.getElementById("profileUsername");
+    const dept = document.getElementById("profileDept");
+    const year = document.getElementById("profileYear");
+    const sem = document.getElementById("profileSem");
+    const role = document.getElementById("profileRole");
+    [username, dept, year, sem, role].forEach(el => {
+      if (!el) return;
+      el.addEventListener("input", markProfileDirty);
+      el.addEventListener("change", markProfileDirty);
+    });
+  };
+
+  wireProfileDirtyListeners();
+  updateSaveProfileState();
+
   if (loginBtn) loginBtn.addEventListener("click", async () => {
     if (!fb.auth) return;
     const email = document.getElementById("authEmail").value.trim();
@@ -182,8 +211,27 @@ function wireAuthButtons() {
       setSyncHint("Login first");
       return;
     }
-    await saveProfile();
-    await refreshAuthState();
+
+    const originalText = saveProfileBtn.textContent;
+    saveProfileBtn.disabled = true;
+    saveProfileBtn.textContent = "Saving...";
+    try {
+      const ok = await saveProfile();
+      await refreshAuthState();
+      if (ok) {
+        profileDirty = false;
+        updateSaveProfileState();
+        saveProfileBtn.textContent = "Profile updated";
+      } else {
+        markProfileDirty();
+        saveProfileBtn.textContent = originalText;
+      }
+    } finally {
+      setTimeout(() => {
+        saveProfileBtn.textContent = originalText;
+        saveProfileBtn.disabled = false;
+      }, 1200);
+    }
   });
 }
 
@@ -249,6 +297,13 @@ function applyProfileToInputs() {
   year.value = fb.profile && fb.profile.year ? fb.profile.year : "";
   sem.value = fb.profile && fb.profile.sem ? fb.profile.sem : "";
   role.value = fb.profile && fb.profile.role ? fb.profile.role : "student";
+
+  profileDirty = false;
+  const saveProfileBtn = document.getElementById("saveProfileBtn");
+  if (saveProfileBtn) {
+    saveProfileBtn.classList.remove("is-unsaved");
+    saveProfileBtn.classList.add("is-saved");
+  }
 }
 
 async function saveProfile() {
@@ -260,12 +315,12 @@ async function saveProfile() {
   const username = normalizeUsername(usernameRaw);
   if (!dept || !year || !sem) {
     setSyncHint("Fill dept, year, sem");
-    return;
+    return false;
   }
 
   if (!username) {
     setSyncHint("Enter a username (letters/numbers/._, 3-20 chars)");
-    return;
+    return false;
   }
 
   const classKey = `${dept}_${year}_${sem}`;
@@ -285,8 +340,10 @@ async function saveProfile() {
     }, { merge: true });
 
     setSyncHint(`Profile saved • ${classKey}`);
+    return true;
   } catch (e) {
     setSyncHint(e && e.message ? e.message : "Failed to save profile");
+    return false;
   }
 }
 
