@@ -47,23 +47,15 @@ let editingCell = null;
 let editingKey = null;
 let editingOriginal = null;
 
-let homeUI = {
-  open: null,
-  close: null
-};
-
-let navUI = {
-  showHome: null,
-  showProfile: null,
-  showSearch: null
-};
-
 let published = {
   loadedAt: 0,
   items: [],
   query: "",
   sort: "recent"
 };
+
+let currentTab = "tabHome";
+let activateTabFn = null;
 
 function encodeTimetableForFirestore(tt) {
   const out = {};
@@ -203,14 +195,17 @@ async function refreshAuthState() {
 
   if (!fb.user) {
     setAuthUI(null);
+    updateProfileHero();
+    enforceLoggedOutDefaults();
     setSyncHint("Login to save and sync your timetable");
     return;
   }
 
+  setAuthUI(fb.user);
   await loadProfile();
   applyProfileToInputs();
+  updateProfileHero();
   await loadCloudTimetables();
-  setAuthUI(fb.user);
 }
 
 function setAuthUI(user) {
@@ -218,9 +213,6 @@ function setAuthUI(user) {
   const authForm = document.getElementById("authForm");
   const profileForm = document.getElementById("profileForm");
   const editToggle = document.getElementById("editToggle");
-  const profileName = document.getElementById("profileName");
-  const profileSub = document.getElementById("profileSub");
-  const profileAvatar = document.getElementById("profileAvatar");
 
   if (!authStatus || !authForm || !profileForm) return;
 
@@ -228,22 +220,15 @@ function setAuthUI(user) {
     authStatus.textContent = "Not signed in";
     authForm.style.display = "grid";
     profileForm.style.display = "none";
-    if (profileName) profileName.textContent = "Your profile";
-    if (profileSub) profileSub.textContent = "Not signed in";
-    if (profileAvatar) profileAvatar.textContent = "U";
+    enforceLoggedOutDefaults();
+    updateEditControls();
     return;
   }
 
   authStatus.textContent = `Signed in: ${user.email || user.uid}`;
   authForm.style.display = "none";
   profileForm.style.display = "grid";
-
-  const email = String(user.email || "");
-  const fallbackName = email ? email.split("@")[0] : "Account";
-  const displayName = (fb.profile && fb.profile.username) ? fb.profile.username : fallbackName;
-  if (profileName) profileName.textContent = displayName;
-  if (profileSub) profileSub.textContent = email || user.uid;
-  if (profileAvatar) profileAvatar.textContent = String(displayName || "U").slice(0, 1).toUpperCase();
+  updateEditControls();
 }
 
 async function loadProfile() {
@@ -420,9 +405,7 @@ async function publishClassTimetable() {
     }, { merge: true });
     setSyncHint(`Published to class • ${key}`);
     published.loadedAt = 0;
-    if (document.getElementById("homeScreen")?.classList.contains("show")) {
-      await refreshPublishedTimetables(true);
-    }
+    await refreshPublishedTimetables(true);
   } catch (e) {
     setSyncHint(e && e.message ? e.message : "Failed to publish to class");
     throw e;
@@ -873,13 +856,249 @@ function scheduleNextBoundary() {
   }
 }
 
+function initTabs() {
+  const tabButtons = Array.from(document.querySelectorAll(".tab-btn"));
+  const views = Array.from(document.querySelectorAll(".tab-view"));
+
+  if (!tabButtons.length || !views.length) return;
+
+  const activate = (tabId, { force = false } = {}) => {
+    if (!force && currentTab === tabId) return;
+    currentTab = tabId;
+
+    tabButtons.forEach(btn => {
+      const isActive = (btn.dataset.tab || "") === tabId;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+
+    views.forEach(view => {
+      const isActive = view.id === tabId;
+      view.classList.toggle("active", isActive);
+      view.setAttribute("aria-hidden", isActive ? "false" : "true");
+    });
+
+    if (tabId === "tabExplore") {
+      if (!published.loadedAt) {
+        refreshPublishedTimetables(false);
+      } else {
+        renderPublishedTimetables();
+      }
+    }
+
+    if (tabId === "tabProfile") {
+      updateProfileHero();
+    }
+  };
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener("click", () => activate(btn.dataset.tab || "tabHome", { force: true }));
+  });
+
+  activateTabFn = (tabId, opts) => activate(tabId, opts);
+  activate(currentTab, { force: true });
+}
+
+function initHomeView() {
+  const tableEditBtns = Array.from(document.querySelectorAll(".table-edit-btn"));
+  if (tableEditBtns.length) {
+    tableEditBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        setEditMode(!settings.edit);
+      });
+    });
+  }
+
+  updateEditControls();
+}
+
+function initControls() {
+  const vibrateToggle = document.getElementById("vibrateToggle");
+  const notifyToggle = document.getElementById("notifyToggle");
+  const editToggle = document.getElementById("editToggle");
+  const savePersonalBtn = document.getElementById("savePersonalBtn");
+  const publishClassBtn = document.getElementById("publishClassBtn");
+
+  setToggleState(vibrateToggle, settings.vibrate);
+  setToggleState(notifyToggle, settings.notify);
+  setToggleState(editToggle, settings.edit);
+
+  if (vibrateToggle) vibrateToggle.addEventListener("click", () => {
+    settings.vibrate = !settings.vibrate;
+    setToggleState(vibrateToggle, settings.vibrate);
+    saveSettings();
+    if (settings.vibrate) triggerVibrate();
+  });
+
+  if (notifyToggle) notifyToggle.addEventListener("click", async () => {
+    if (!settings.notify) {
+      if ("Notification" in window) {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") {
+          settings.notify = false;
+          setToggleState(notifyToggle, false);
+          saveSettings();
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+    settings.notify = !settings.notify;
+    setToggleState(notifyToggle, settings.notify);
+    saveSettings();
+    if (settings.notify) {
+      const now = new Date();
+      const dayIndex = now.getDay() - 1;
+      const periodIndex = currentPeriodIndex();
+      if (dayIndex >= 0 && dayIndex <= 5 && periodIndex !== -1) {
+        const subjectLabel = normalizeSlotLabel(periodIndex, timetable[dayIndex][periodIndex]);
+        triggerNotify(dayIndex, periodIndex, subjectLabel || "Free");
+      }
+    }
+  });
+
+  if (editToggle) editToggle.addEventListener("click", () => {
+    setEditMode(!settings.edit);
+  });
+
+  if (savePersonalBtn) savePersonalBtn.addEventListener("click", async () => {
+    if (!fb.user || !fb.db) {
+      setSyncHint("Login to save personal timetable");
+      return;
+    }
+    try {
+      await savePersonalTimetable();
+    } catch (_) {
+    }
+  });
+
+  if (publishClassBtn) publishClassBtn.addEventListener("click", async () => {
+    if (!fb.user || !fb.db) {
+      setSyncHint("Login to publish class timetable");
+      return;
+    }
+    if (!fb.profile || fb.profile.role !== "teacher") {
+      setSyncHint("Only teachers can publish to class");
+      return;
+    }
+    try {
+      await publishClassTimetable();
+    } catch (_) {
+    }
+  });
+}
+
+function initExplore() {
+  const refresh = document.getElementById("homeRefresh");
+  const search = document.getElementById("homeSearch");
+  const sort = document.getElementById("homeSort");
+
+  if (refresh) refresh.addEventListener("click", async () => {
+    await refreshPublishedTimetables(true);
+  });
+
+  if (sort) {
+    sort.value = published.sort;
+    sort.addEventListener("change", () => {
+      published.sort = sort.value || "recent";
+      renderPublishedTimetables();
+    });
+  }
+
+  if (search) {
+    search.value = published.query;
+    search.addEventListener("input", () => {
+      published.query = search.value || "";
+      renderPublishedTimetables();
+    });
+  }
+
+  renderPublishedTimetables();
+}
+
+function setEditMode(on, options = {}) {
+  const next = Boolean(on);
+  const { silentHint = false, force = false } = options;
+  if (!force && next === settings.edit) {
+    updateEditControls();
+    return;
+  }
+
+  settings.edit = next;
+  saveSettings();
+  if (!next) commitEditing();
+  updateEditControls();
+  if (next && !silentHint && (!fb.enabled || !fb.user)) {
+    setSyncHint("Edit mode enabled (local only). Login to sync.");
+  }
+}
+
+function updateEditControls() {
+  const editToggle = document.getElementById("editToggle");
+  const tableEditBtns = Array.from(document.querySelectorAll(".table-edit-btn"));
+
+  setToggleState(editToggle, settings.edit);
+
+  tableEditBtns.forEach(btn => {
+    btn.classList.toggle("on", settings.edit);
+    btn.setAttribute("aria-label", settings.edit ? "Disable editing" : "Enable editing");
+    btn.title = settings.edit ? "Editing enabled" : "Enable editing";
+  });
+
+  document.body.classList.toggle("editing-active", settings.edit);
+}
+
+function enforceLoggedOutDefaults() {
+  if (fb.user) return;
+  setEditMode(false, { silentHint: true, force: true });
+}
+
+function updateProfileHero() {
+  const nameEl = document.getElementById("profileHeroName");
+  const emailEl = document.getElementById("profileHeroEmail");
+  const avatarEl = document.getElementById("profileAvatar");
+  const initialEl = document.getElementById("profileAvatarInitial");
+
+  if (!nameEl || !emailEl || !avatarEl || !initialEl) return;
+
+  let displayName = "Guest";
+  let detail = "Sign in to personalise your timetable";
+
+  if (fb.user) {
+    const profileName = fb.profile && fb.profile.username ? fb.profile.username : "";
+    if (profileName) {
+      displayName = profileName;
+    } else if (fb.user.displayName) {
+      displayName = fb.user.displayName;
+    } else if (fb.user.email) {
+      displayName = fb.user.email.split("@")[0];
+    }
+    const classKey = fb.profile && fb.profile.classKey ? fb.profile.classKey : null;
+    if (classKey) {
+      detail = `${classKey} • ${fb.profile.role === "teacher" ? "Teacher" : "Student"}`;
+    } else {
+      detail = fb.user.email || fb.user.uid;
+    }
+  }
+
+  nameEl.textContent = displayName;
+  emailEl.textContent = detail;
+
+  const initial = (displayName || "?").trim().charAt(0).toUpperCase() || "?";
+  initialEl.textContent = initial;
+  avatarEl.dataset.initial = initial;
+}
+
 function init() {
   loadSettings();
   loadTimetable();
+  enforceLoggedOutDefaults();
   buildTable();
-  initNav();
-  initDrawer();
-  initHome();
+  initTabs();
+  initHomeView();
+  initControls();
+  initExplore();
   initStudents();
   initFirebase();
   updateUI();
@@ -918,113 +1137,8 @@ function init() {
     if (!insideTable) commitEditing();
   });
 
+  updateEditControls();
   initTheme();
-}
-
-function initHome() {
-  const homeScreen = document.getElementById("homeScreen");
-  const homeBack = document.getElementById("homeBack");
-  const homeRefresh = document.getElementById("homeRefresh");
-  const homeSearch = document.getElementById("homeSearch");
-  const homeSort = document.getElementById("homeSort");
-
-  if (!homeScreen) return;
-
-  function openHome() {
-    homeScreen.classList.add("show");
-    homeScreen.setAttribute("aria-hidden", "false");
-    if (homeSort) homeSort.value = published.sort;
-    if (homeSearch) homeSearch.value = published.query;
-    refreshPublishedTimetables(false);
-    if (navUI.showSearch) navUI.showSearch();
-  }
-
-  function closeHome() {
-    homeScreen.classList.remove("show");
-    homeScreen.setAttribute("aria-hidden", "true");
-    if (navUI.showHome) navUI.showHome();
-  }
-
-  homeUI.open = openHome;
-  homeUI.close = closeHome;
-  if (homeBack) homeBack.addEventListener("click", () => closeHome());
-
-  if (homeRefresh) homeRefresh.addEventListener("click", async () => {
-    await refreshPublishedTimetables(true);
-  });
-
-  if (homeSort) homeSort.addEventListener("change", () => {
-    published.sort = homeSort.value || "recent";
-    renderPublishedTimetables();
-  });
-
-  if (homeSearch) homeSearch.addEventListener("input", () => {
-    published.query = homeSearch.value || "";
-    renderPublishedTimetables();
-  });
-
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape") closeHome();
-  });
-}
-
-function initNav() {
-  const app = document.querySelector(".app");
-  const profileScreen = document.getElementById("profileScreen");
-  const homeScreen = document.getElementById("homeScreen");
-  const navHome = document.getElementById("navHome");
-  const navSearch = document.getElementById("navSearch");
-  const navProfile = document.getElementById("navProfile");
-
-  if (!app || !profileScreen || !navHome || !navSearch || !navProfile) return;
-
-  function setActive(which) {
-    navHome.classList.toggle("active", which === "home");
-    navSearch.classList.toggle("active", which === "search");
-    navProfile.classList.toggle("active", which === "profile");
-  }
-
-  function showHome() {
-    app.style.display = "";
-    profileScreen.classList.remove("show");
-    profileScreen.setAttribute("aria-hidden", "true");
-    if (homeScreen) {
-      homeScreen.classList.remove("show");
-      homeScreen.setAttribute("aria-hidden", "true");
-    }
-    setActive("home");
-  }
-
-  function showProfile() {
-    app.style.display = "none";
-    profileScreen.classList.add("show");
-    profileScreen.setAttribute("aria-hidden", "false");
-    if (homeScreen) {
-      homeScreen.classList.remove("show");
-      homeScreen.setAttribute("aria-hidden", "true");
-    }
-    setActive("profile");
-  }
-
-  function showSearch() {
-    app.style.display = "";
-    profileScreen.classList.remove("show");
-    profileScreen.setAttribute("aria-hidden", "true");
-    setActive("search");
-  }
-
-  navUI.showHome = showHome;
-  navUI.showProfile = showProfile;
-  navUI.showSearch = showSearch;
-
-  navHome.addEventListener("click", () => showHome());
-  navProfile.addEventListener("click", () => showProfile());
-  navSearch.addEventListener("click", () => {
-    if (homeUI.open) homeUI.open();
-    else showSearch();
-  });
-
-  showHome();
 }
 
 function initStudents() {
@@ -1145,40 +1259,40 @@ function initStudents() {
 
     list.innerHTML = "";
     const group = document.createElement("div");
-    group.className = "home-group";
+    group.className = "students-group";
 
     const head = document.createElement("div");
-    head.className = "home-group-head";
+    head.className = "students-group-head";
     const title = document.createElement("div");
-    title.className = "home-group-title";
+    title.className = "students-group-title";
     title.textContent = "Students";
     const sub = document.createElement("div");
-    sub.className = "home-group-sub";
+    sub.className = "students-group-sub";
     sub.textContent = fb.profile && fb.profile.classKey ? fb.profile.classKey : "";
     head.appendChild(title);
     head.appendChild(sub);
     group.appendChild(head);
 
     const itemsWrap = document.createElement("div");
-    itemsWrap.className = "home-items";
+    itemsWrap.className = "students-items";
 
     for (const it of items) {
       const row = document.createElement("div");
-      row.className = "home-item";
+      row.className = "students-item";
 
       const main = document.createElement("div");
-      main.className = "home-item-main";
+      main.className = "students-item-main";
 
       const t = document.createElement("div");
-      t.className = "home-item-title";
+      t.className = "students-item-title";
       t.textContent = it.username || "(no username)";
 
       const s = document.createElement("div");
-      s.className = "home-item-sub";
+      s.className = "students-item-sub";
       s.textContent = it.email;
 
       const chip = document.createElement("div");
-      chip.className = "home-item-chip";
+      chip.className = "students-item-chip";
       chip.textContent = "Student";
 
       main.appendChild(t);
@@ -1262,7 +1376,6 @@ async function refreshPublishedTimetables(force) {
 function renderPublishedTimetables() {
   const meta = document.getElementById("homeMeta");
   const list = document.getElementById("homeList");
-  const homeScreen = document.getElementById("homeScreen");
   if (!meta || !list) return;
 
   if (!fb.enabled || !fb.db) {
@@ -1306,17 +1419,17 @@ function renderPublishedTimetables() {
     count += deptItems.length;
 
     const group = document.createElement("div");
-    group.className = "home-group";
+    group.className = "explore-group";
 
     const head = document.createElement("div");
-    head.className = "home-group-head";
+    head.className = "explore-group-head";
 
     const title = document.createElement("div");
-    title.className = "home-group-title";
+    title.className = "explore-group-title";
     title.textContent = dept;
 
     const sub = document.createElement("div");
-    sub.className = "home-group-sub";
+    sub.className = "explore-group-sub";
     sub.textContent = `College • ${deptItems.length} published`;
 
     head.appendChild(title);
@@ -1324,26 +1437,26 @@ function renderPublishedTimetables() {
     group.appendChild(head);
 
     const itemsWrap = document.createElement("div");
-    itemsWrap.className = "home-items";
+    itemsWrap.className = "explore-items";
 
     for (const it of deptItems) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "home-item";
+      btn.className = "explore-item";
 
       const main = document.createElement("div");
-      main.className = "home-item-main";
+      main.className = "explore-item-main";
 
       const t = document.createElement("div");
-      t.className = "home-item-title";
+      t.className = "explore-item-title";
       t.textContent = `${it.year || ""} ${it.sem || ""}`.trim() || it.id;
 
       const s = document.createElement("div");
-      s.className = "home-item-sub";
+      s.className = "explore-item-sub";
       s.textContent = `${it.dept}_${it.year || ""}_${it.sem || ""}`;
 
       const chip = document.createElement("div");
-      chip.className = "home-item-chip";
+      chip.className = "explore-item-chip";
       const ms = toMillis(it.updatedAt);
       chip.textContent = ms ? new Date(ms).toLocaleDateString() : "Published";
 
@@ -1362,11 +1475,7 @@ function renderPublishedTimetables() {
         buildTable();
         updateUI();
         setSyncHint(`Loaded published timetable: ${it.id}`);
-        if (homeScreen) {
-          homeScreen.classList.remove("show");
-          homeScreen.setAttribute("aria-hidden", "true");
-        }
-        if (navUI.showHome) navUI.showHome();
+        if (typeof activateTabFn === "function") activateTabFn("tabHome", { force: true });
       });
 
       itemsWrap.appendChild(btn);
@@ -1429,7 +1538,7 @@ function setToggleState(btn, on) {
 }
 
 function initDrawer() {
-  const btn = document.getElementById("openSettingsBtn");
+  const btn = document.getElementById("settingsBtn");
   const drawer = document.getElementById("settingsDrawer");
   const backdrop = document.getElementById("settingsBackdrop");
   const close = document.getElementById("settingsClose");
@@ -1443,7 +1552,7 @@ function initDrawer() {
   setToggleState(notifyToggle, settings.notify);
   setToggleState(editToggle, settings.edit);
 
-  if (btn) btn.addEventListener("click", () => openDrawer());
+  btn.addEventListener("click", () => openDrawer());
   close.addEventListener("click", () => closeDrawer());
   backdrop.addEventListener("click", () => closeDrawer());
   document.addEventListener("keydown", e => {

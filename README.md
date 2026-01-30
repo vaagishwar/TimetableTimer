@@ -126,7 +126,7 @@ Teacher-published timetable for a class:
 ### Apply rules in Firebase Console (step-by-step)
 
 1. Firebase Console → your project
-2. Build → **Firestore Database**
+2. Build → **Firestore Database**0
 3. Open the **Rules** tab
 4. Select all existing rules in the editor (test/locked/default) and delete them
 5. Paste the rules below
