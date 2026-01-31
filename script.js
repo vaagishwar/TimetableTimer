@@ -1,10 +1,10 @@
 const timetable = [
-  ["DVAT","IS","Break","NLP","FCA","Break","BS","NLP","Break","Free","DM"],
-  ["CNAP","FCA","Break","DVAT","NLP","Break","IS","BS","Break","BS","DM"],
-  ["IS","FCA","Break","DVAT","FCA","Break","CNAP","CNAP LAB / IS LAB","Break","CNAP LAB / IS LAB","CNAP LAB / IS LAB"],
-  ["NLP","FCA","Break","CNAP","IS","Break","BS","IS LAB / CNAP LAB","Break","IS LAB / CNAP LAB","IS LAB / CNAP LAB"],
-  ["NLP","DM","Break","NLP","DVAT","Break","IS","MINI PROJECT","Break","MINI PROJECT","MINI PROJECT"],
-  ["DVAT","CNAP","Break","BS","DM","Break","Free","GE","Break","Free","CLUB"]
+  ["","","Break","","","Break","","","Break","",""],
+  ["","","Break","","","Break","","","Break","",""],
+  ["","","Break","","","Break","","","Break","",""],
+  ["","","Break","","","Break","","","Break","",""],
+  ["","","Break","","","Break","","","Break","",""],
+  ["","","Break","","","Break","","","Break","",""]
 ];
 
 const times = [

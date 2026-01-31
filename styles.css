@@ -1087,6 +1087,7 @@ body {
   border: none;
   padding: 12px 16px;
   border-radius: 18px;
+  
   animation: hintPop 0.38s ease;
 }
 
@@ -1094,6 +1095,7 @@ body {
   margin: 10px 12px 6px;
   font-size: 13px;
   line-height: 1.35;
+  
   color: var(--muted);
   font-weight: 600;
 }
