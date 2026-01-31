@@ -12,14 +12,16 @@
   <main class="tabs">
     <section class="tab-view active" id="tabHome" aria-labelledby="tabBtnHome">
       <div class="header">
-        <div class="header-stack">
-          <div class="clock" id="clock">--:--</div>
-          <div class="current-card" id="currentCard">
+        <div class="header-dash">
+          <div class="dash-card dash-left" aria-label="Current subject">
             <div class="current-title" id="currentTitle">--</div>
             <div class="current-sub" id="currentSub">--</div>
+            <div class="subline" id="periodMeta">--</div>
           </div>
-          <div id="status">Loading</div>
-          <div class="subline" id="periodMeta">--</div>
+          <div class="dash-card dash-right" aria-label="Time">
+            <div class="clock" id="clock">--:--</div>
+            <div id="status">Loading</div>
+          </div>
         </div>
       </div>
       <div class="progress-wrap">
@@ -28,6 +30,7 @@
         </div>
         <div class="progress-meta" id="progressMeta">--</div>
       </div>
+      <p class="home-empty-hint" id="homeEmptyHint" style="display:none"></p>
       <div class="table-wrapper">
         <button class="table-edit-btn" id="tableEditBtn" type="button" aria-label="Enable editing">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -35,7 +38,10 @@
           </svg>
           <span class="sr-only">Toggle editing</span>
         </button>
-        <table id="table"></table>
+        <p class="table-clear" id="clearAllText">Clear all</p>
+        <div class="table-scroll">
+          <table id="table"></table>
+        </div>
       </div>
     </section>
 
@@ -86,10 +92,12 @@
               <option value="">Dept</option>
               <option value="CSE">CSE</option>
               <option value="CSBS">CSBS</option>
+              <option value="CSBS">MCTR</option>
               <option value="IT">IT</option>
               <option value="AIDS">AIDS</option>
               <option value="CCE">CCE</option>
               <option value="BME">BME</option>
+              <option value="BME">BPT</option>
               <option value="EEE">EEE</option>
               <option value="ICE">ICE</option>
               <option value="CE">CE</option>
@@ -117,6 +125,7 @@
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
             </select>
+            <p>Select teacher to get extra features</p>
           </div>
           <div class="auth-actions">
             <button class="auth-btn" id="saveProfileBtn" type="button">Save profile</button>

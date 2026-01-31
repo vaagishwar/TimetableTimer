@@ -59,6 +59,43 @@ let profileDirty = false;
 let currentTab = "tabHome";
 let activateTabFn = null;
 
+let activeClassKey = null;
+
+function allowedSemsForYear(year) {
+  const y = String(year || "").trim().toUpperCase();
+  const map = {
+    I: ["I", "II"],
+    II: ["III", "IV"],
+    III: ["V", "VI"],
+    IV: ["VII", "VIII"]
+  };
+  return map[y] || ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+}
+
+function updateSemOptions() {
+  const yearEl = document.getElementById("profileYear");
+  const semEl = document.getElementById("profileSem");
+  if (!yearEl || !semEl) return;
+
+  const current = String(semEl.value || "").trim().toUpperCase();
+  const allowed = allowedSemsForYear(yearEl.value);
+
+  semEl.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Sem";
+  semEl.appendChild(placeholder);
+
+  allowed.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    semEl.appendChild(opt);
+  });
+
+  semEl.value = allowed.includes(current) ? current : "";
+}
+
 function encodeTimetableForFirestore(tt) {
   const out = {};
   if (!Array.isArray(tt)) return out;
@@ -166,6 +203,12 @@ function wireAuthButtons() {
       el.addEventListener("input", markProfileDirty);
       el.addEventListener("change", markProfileDirty);
     });
+
+    if (year) {
+      year.addEventListener("change", () => {
+        updateSemOptions();
+      });
+    }
   };
 
   wireProfileDirtyListeners();
@@ -298,6 +341,8 @@ function applyProfileToInputs() {
   sem.value = fb.profile && fb.profile.sem ? fb.profile.sem : "";
   role.value = fb.profile && fb.profile.role ? fb.profile.role : "student";
 
+  updateSemOptions();
+
   profileDirty = false;
   const saveProfileBtn = document.getElementById("saveProfileBtn");
   if (saveProfileBtn) {
@@ -315,6 +360,13 @@ async function saveProfile() {
   const username = normalizeUsername(usernameRaw);
   if (!dept || !year || !sem) {
     setSyncHint("Fill dept, year, sem");
+    return false;
+  }
+
+  const allowed = allowedSemsForYear(year);
+  if (!allowed.includes(sem)) {
+    setSyncHint(`Invalid semester for Year ${year}`);
+    updateSemOptions();
     return false;
   }
 
@@ -383,6 +435,21 @@ async function loadCloudTimetables() {
     return;
   }
 
+  if (activeClassKey !== key) {
+    activeClassKey = key;
+    commitEditing();
+    try {
+      localStorage.removeItem("tt_timetable");
+      localStorage.removeItem("tt_class_timetable");
+    } catch (_) {
+    }
+    applyBlankTimetable();
+    saveTimetable();
+    buildTable();
+    updateUI();
+    updateHomeEmptyHint();
+  }
+
   const classDoc = await fb.db.collection("classTimetables").doc(key).get();
   if (classDoc.exists && classDoc.data()) {
     const decoded = Array.isArray(classDoc.data().timetable)
@@ -399,18 +466,8 @@ async function loadCloudTimetables() {
     } else {
     setSyncHint("No class timetable yet (teacher can publish)");
     }
-  }
-
-  const personalDoc = await fb.db.collection("personalTimetables").doc(fb.user.uid).get();
-  if (personalDoc.exists && personalDoc.data()) {
-    const decoded = Array.isArray(personalDoc.data().timetable)
-      ? personalDoc.data().timetable
-      : decodeTimetableFromFirestore(personalDoc.data());
-
-    if (decoded && Array.isArray(decoded)) {
-      applyRemoteTimetable(decoded);
-      setSyncHint("Loaded personal timetable");
-    }
+  } else {
+    setSyncHint("No class timetable yet (teacher can publish)");
   }
 
   const publishBtn = document.getElementById("publishClassBtn");
@@ -431,6 +488,7 @@ function applyRemoteTimetable(remote) {
   saveTimetable();
   buildTable();
   updateUI();
+  updateHomeEmptyHint();
 }
 
 async function savePersonalTimetable() {
@@ -503,6 +561,14 @@ function applyBlankTimetable() {
   }
 }
 
+function clearLocalTimetables() {
+  try {
+    localStorage.removeItem("tt_timetable");
+    localStorage.removeItem("tt_class_timetable");
+  } catch (_) {
+  }
+}
+
 function saveTimetable() {
   try {
     localStorage.setItem("tt_timetable", JSON.stringify(timetable));
@@ -530,6 +596,43 @@ function setSyncHint(text) {
   setSyncHint._t = setTimeout(() => {
     el.classList.remove("toast");
   }, 1600);
+}
+
+function timetableHasAnySubject() {
+  for (let d = 0; d < timetable.length; d++) {
+    for (let s = 0; s < timetable[d].length; s++) {
+      const label = normalizeSlotLabel(s, timetable[d][s]);
+      if (!isPauseLabel(label) && String(label || "").trim()) return true;
+    }
+  }
+  return false;
+}
+
+function updateHomeEmptyHint() {
+  const hint = document.getElementById("homeEmptyHint");
+  if (!hint) return;
+
+  const isEmpty = !timetableHasAnySubject();
+  if (!isEmpty) {
+    hint.style.display = "none";
+    hint.textContent = "";
+    hint.classList.remove("is-clickable");
+    return;
+  }
+
+  hint.style.display = "block";
+  hint.classList.add("is-clickable");
+  hint.textContent = settings.edit
+    ? "No subjects yet — tap a cell to add your first subject (e.g., XYZ)"
+    : "No subjects yet — tap here to enable edit mode and add your first subject (e.g., XYZ)";
+}
+
+function focusFirstEditableCell() {
+  const td = document.querySelector("#table td:not(.pause)");
+  if (!td) return;
+  td.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  if (!settings.edit) setEditMode(true, { silentHint: true });
+  startEditing(td);
 }
 
 function startEditing(td) {
@@ -604,6 +707,7 @@ function commitEditing() {
   cleanupEditing();
   buildTable();
   updateUI();
+  updateHomeEmptyHint();
 }
 
 function cleanupEditing() {
@@ -850,7 +954,10 @@ function updateUI() {
   }
   const periodTag = isPauseLabel(subject) ? subject : `Hour ${periodNumber}`;
 
-  status.textContent = `${days[dayIndex]} - ${periodTag} - ${subject}`;
+  const showSubject = String(subject).trim().toLowerCase() !== String(periodTag).trim().toLowerCase();
+  status.textContent = showSubject
+    ? `${days[dayIndex]} - ${periodTag} - ${subject}`
+    : `${days[dayIndex]} - ${periodTag}`;
   currentTitle.textContent = subject;
   currentSub.textContent = `${days[dayIndex]} • ${periodTag}`;
   periodMeta.textContent = `${formatRange(start, end)} • ${durationText(start, end)}`;
@@ -867,7 +974,7 @@ function onPeriodBoundary(dayIndex, periodIndex, subject) {
 
 function triggerVibrate() {
   if (!("vibrate" in navigator)) return;
-  navigator.vibrate([60, 80, 60]);
+  navigator.vibrate([1000, 220, 1000]);
 }
 
 function triggerNotify(dayIndex, periodIndex, subject) {
@@ -962,11 +1069,33 @@ function initHomeView() {
     tableEditBtns.forEach(btn => {
       btn.addEventListener("click", () => {
         setEditMode(!settings.edit);
+        updateHomeEmptyHint();
       });
     });
   }
 
+  const clearAllText = document.getElementById("clearAllText");
+  if (clearAllText) {
+    clearAllText.addEventListener("click", () => {
+      if (!confirm("Clear all subjects from the timetable?")) return;
+      commitEditing();
+      applyBlankTimetable();
+      saveTimetable();
+      buildTable();
+      updateUI();
+      updateHomeEmptyHint();
+    });
+  }
+
+  const homeEmptyHint = document.getElementById("homeEmptyHint");
+  if (homeEmptyHint) {
+    homeEmptyHint.addEventListener("click", () => {
+      if (!timetableHasAnySubject()) focusFirstEditableCell();
+    });
+  }
+
   updateEditControls();
+  updateHomeEmptyHint();
 }
 
 function initControls() {
@@ -1079,6 +1208,7 @@ function setEditMode(on, options = {}) {
   const { silentHint = false, force = false } = options;
   if (!force && next === settings.edit) {
     updateEditControls();
+    updateHomeEmptyHint();
     return;
   }
 
@@ -1086,6 +1216,7 @@ function setEditMode(on, options = {}) {
   saveSettings();
   if (!next) commitEditing();
   updateEditControls();
+  updateHomeEmptyHint();
   if (next && !silentHint && (!fb.enabled || !fb.user)) {
     setSyncHint("Edit mode enabled (local only). Login to sync.");
   }
@@ -1108,7 +1239,17 @@ function updateEditControls() {
 
 function enforceLoggedOutDefaults() {
   if (fb.user) return;
-  setEditMode(false, { silentHint: true, force: true });
+
+  activeClassKey = null;
+
+  clearLocalTimetables();
+  applyBlankTimetable();
+  buildTable();
+  updateUI();
+
+  setEditMode(true, { silentHint: true, force: true });
+  setSyncHint("Logged out • Edit mode enabled — tap a cell to start (login to sync)");
+  updateHomeEmptyHint();
 }
 
 function updateProfileHero() {
@@ -1159,6 +1300,7 @@ function init() {
   initStudents();
   initFirebase();
   updateUI();
+  updateHomeEmptyHint();
   scheduleNextBoundary();
   if (tickTimer) clearInterval(tickTimer);
   tickTimer = setInterval(updateUI, 2000);
