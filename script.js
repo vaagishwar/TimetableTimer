@@ -1,13 +1,6 @@
-const timetable = [
-  ["","","Break","","","Break","","","Break","",""],
-  ["","","Break","","","Break","","","Break","",""],
-  ["","","Break","","","Break","","","Break","",""],
-  ["","","Break","","","Break","","","Break","",""],
-  ["","","Break","","","Break","","","Break","",""],
-  ["","","Break","","","Break","","","Break","",""]
-];
+const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
-const times = [
+const timesDefault = [
   ["09:00","09:50"],
   ["09:50","10:40"],
   ["10:40","10:55"],
@@ -21,7 +14,129 @@ const times = [
   ["16:00","16:50"]
 ];
 
-const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const timesFY = [
+  ["08:45","09:35"],
+  ["09:35","10:25"],
+  ["10:25","11:15"],
+  ["11:15","11:30"],
+  ["11:30","12:20"],
+  ["12:20","13:10"],
+  ["13:10","13:50"],
+  ["13:50","14:40"],
+  ["14:40","15:30"],
+  ["15:30","16:20"]
+];
+
+const timesBPT = [
+  ["09:00","09:50"],
+  ["09:50","10:40"],
+  ["10:40","11:00"],
+  ["11:00","11:50"],
+  ["11:50","12:40"],
+  ["12:40","13:30"],
+  ["13:30","14:15"],
+  ["14:15","15:05"],
+  ["15:05","15:55"],
+  ["15:55","16:45"]
+];
+
+function blankTimetableLike(timesArr, pauseLabelsBySlot) {
+  return days.map(() => timesArr.map((_, i) => pauseLabelsBySlot[i] || ""));
+}
+
+const templates = {
+  default: {
+    id: "default",
+    times: timesDefault,
+    blank: () => blankTimetableLike(timesDefault, { 2: "Break", 5: "Lunch", 8: "Break" })
+  },
+  fy: {
+    id: "fy",
+    times: timesFY,
+    blank: () => blankTimetableLike(timesFY, { 3: "Break", 6: "Lunch" })
+  },
+  bpt: {
+    id: "bpt",
+    times: timesBPT,
+    blank: () => blankTimetableLike(timesBPT, { 2: "Break", 6: "Lunch" })
+  }
+};
+
+let activeTemplateId = "default";
+let timetable = templates.default.blank();
+
+function loadTemplateFromLocal() {
+  try {
+    const raw = String(localStorage.getItem("tt_template") || "").trim().toLowerCase();
+    if (raw && templates[raw]) activeTemplateId = raw;
+  } catch (_) {
+  }
+}
+
+function getActiveTemplate() {
+  return templates[activeTemplateId] || templates.default;
+}
+
+function getActiveTimes() {
+  return getActiveTemplate().times;
+}
+
+function getActiveBlankTimetable() {
+  return getActiveTemplate().blank();
+}
+
+function computeAutoTemplateId(profile) {
+  const dept = String(profile && profile.dept ? profile.dept : "").trim().toUpperCase();
+  const year = String(profile && profile.year ? profile.year : "").trim().toUpperCase();
+  const sem = String(profile && profile.sem ? profile.sem : "").trim().toUpperCase();
+  if (dept === "BPT") return "bpt";
+  if (year === "I" && (sem === "I" || sem === "II")) return "fy";
+  return "default";
+}
+
+function resolveTemplateId(profile) {
+  const override = String(profile && profile.templateId ? profile.templateId : "").trim().toLowerCase();
+  if (override && templates[override]) return override;
+  return computeAutoTemplateId(profile);
+}
+
+function setActiveTemplate(templateId, { resetTimetable = false } = {}) {
+  const next = templates[templateId] ? templateId : "default";
+  if (next === activeTemplateId && !resetTimetable) return;
+  activeTemplateId = next;
+  try {
+    localStorage.setItem("tt_template", activeTemplateId);
+  } catch (_) {
+  }
+  if (resetTimetable) {
+    timetable = getActiveBlankTimetable();
+    saveTimetable();
+  }
+  buildTable();
+  updateUI();
+  updateHomeEmptyHint();
+}
+
+function legacyClassKeyFromProfile(profile) {
+  if (!profile) return null;
+  const dept = String(profile.dept || "").trim().toUpperCase();
+  const year = String(profile.year || "").trim().toUpperCase();
+  const sem = String(profile.sem || "").trim().toUpperCase();
+  if (!dept || !year || !sem) return null;
+  return `${dept}_${year}_${sem}`;
+}
+
+async function fetchClassTimetableDoc(key) {
+  if (!key || !fb.db) return null;
+  try {
+    const doc = await fb.db.collection("classTimetables").doc(key).get();
+    if (!doc.exists) return null;
+    return doc;
+  } catch (_) {
+    return null;
+  }
+}
+
 let boundaryTimer = null;
 let tickTimer = null;
 let cellMap = new Map();
@@ -113,7 +228,8 @@ function decodeTimetableFromFirestore(data) {
   if (data.timetableByDay && typeof data.timetableByDay === "object") {
     const byDay = data.timetableByDay;
     const rows = [];
-    for (let i = 0; i < timetable.length; i++) {
+    const baseDays = days.length;
+    for (let i = 0; i < baseDays; i++) {
       const r = Array.isArray(byDay[`d${i}`]) ? byDay[`d${i}`] : null;
       if (!r) return null;
       rows.push(r.map(v => String(v)));
@@ -124,7 +240,8 @@ function decodeTimetableFromFirestore(data) {
   const hasD0 = Object.prototype.hasOwnProperty.call(data, "d0");
   if (hasD0) {
     const rows = [];
-    for (let i = 0; i < timetable.length; i++) {
+    const baseDays = days.length;
+    for (let i = 0; i < baseDays; i++) {
       const r = Array.isArray(data[`d${i}`]) ? data[`d${i}`] : null;
       if (!r) return null;
       rows.push(r.map(v => String(v)));
@@ -197,8 +314,9 @@ function wireAuthButtons() {
     const dept = document.getElementById("profileDept");
     const year = document.getElementById("profileYear");
     const sem = document.getElementById("profileSem");
+    const templateEl = document.getElementById("profileTemplate");
     const role = document.getElementById("profileRole");
-    [username, dept, year, sem, role].forEach(el => {
+    [username, dept, year, sem, templateEl, role].forEach(el => {
       if (!el) return;
       el.addEventListener("input", markProfileDirty);
       el.addEventListener("change", markProfileDirty);
@@ -326,6 +444,10 @@ async function loadProfile() {
   if (!fb.user || !fb.db) return;
   const doc = await fb.db.collection("users").doc(fb.user.uid).get();
   fb.profile = doc.exists ? doc.data() : null;
+  if (fb.profile) {
+    const resolved = resolveTemplateId(fb.profile);
+    setActiveTemplate(resolved, { resetTimetable: false });
+  }
 }
 
 function applyProfileToInputs() {
@@ -333,6 +455,7 @@ function applyProfileToInputs() {
   const dept = document.getElementById("profileDept");
   const year = document.getElementById("profileYear");
   const sem = document.getElementById("profileSem");
+  const templateEl = document.getElementById("profileTemplate");
   const role = document.getElementById("profileRole");
   if (!username || !dept || !year || !sem || !role) return;
   username.value = fb.profile && fb.profile.username ? fb.profile.username : "";
@@ -340,6 +463,11 @@ function applyProfileToInputs() {
   year.value = fb.profile && fb.profile.year ? fb.profile.year : "";
   sem.value = fb.profile && fb.profile.sem ? fb.profile.sem : "";
   role.value = fb.profile && fb.profile.role ? fb.profile.role : "student";
+
+  if (templateEl) {
+    templateEl.value = "";
+    templateEl.style.display = "none";
+  }
 
   updateSemOptions();
 
@@ -356,6 +484,7 @@ async function saveProfile() {
   const dept = document.getElementById("profileDept").value.trim().toUpperCase();
   const year = document.getElementById("profileYear").value.trim().toUpperCase();
   const sem = document.getElementById("profileSem").value.trim().toUpperCase();
+  const templateOverride = "";
   const role = document.getElementById("profileRole").value;
   const username = normalizeUsername(usernameRaw);
   if (!dept || !year || !sem) {
@@ -375,7 +504,10 @@ async function saveProfile() {
     return false;
   }
 
-  const classKey = `${dept}_${year}_${sem}`;
+  const computedProfile = { dept, year, sem, templateId: "" };
+  const resolvedTemplate = resolveTemplateId(computedProfile);
+  const classKey = `${dept}_${year}_${sem}_${resolvedTemplate}`;
+  const shouldResetTemplate = resolvedTemplate !== activeTemplateId;
 
   try {
     await reserveUsername(username);
@@ -386,12 +518,15 @@ async function saveProfile() {
       dept,
       year,
       sem,
+      templateId: templateOverride || "",
       classKey,
       role: role === "teacher" ? "teacher" : "student",
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
     setSyncHint(`Profile saved • ${classKey}`);
+    if (fb.profile) fb.profile.templateId = "";
+    setActiveTemplate(resolvedTemplate, { resetTimetable: shouldResetTemplate });
     return true;
   } catch (e) {
     setSyncHint(e && e.message ? e.message : "Failed to save profile");
@@ -430,41 +565,39 @@ async function reserveUsername(username) {
 async function loadCloudTimetables() {
   if (!fb.user || !fb.db) return;
   const key = classKeyFromProfile(fb.profile);
-  if (!key) {
+  const legacyKey = legacyClassKeyFromProfile(fb.profile);
+  if (!key && !legacyKey) {
     setSyncHint("Save profile to load class timetable");
     return;
   }
 
-  if (activeClassKey !== key) {
-    activeClassKey = key;
+  const desiredKey = key || legacyKey;
+  if (activeClassKey !== desiredKey) {
+    activeClassKey = desiredKey;
     commitEditing();
-    try {
-      localStorage.removeItem("tt_timetable");
-      localStorage.removeItem("tt_class_timetable");
-    } catch (_) {
-    }
-    applyBlankTimetable();
-    saveTimetable();
-    buildTable();
-    updateUI();
-    updateHomeEmptyHint();
   }
 
-  const classDoc = await fb.db.collection("classTimetables").doc(key).get();
-  if (classDoc.exists && classDoc.data()) {
-    const decoded = Array.isArray(classDoc.data().timetable)
-      ? classDoc.data().timetable
-      : decodeTimetableFromFirestore(classDoc.data());
+  const doc = (await fetchClassTimetableDoc(key)) || (await fetchClassTimetableDoc(legacyKey));
+  if (doc && doc.data()) {
+    const data = doc.data() || {};
+    const templateFromDoc = String(data.templateId || "").trim().toLowerCase();
+    if (templateFromDoc && templates[templateFromDoc]) {
+      setActiveTemplate(templateFromDoc, { resetTimetable: false });
+    }
+
+    const decoded = Array.isArray(data.timetable)
+      ? data.timetable
+      : decodeTimetableFromFirestore(data);
 
     if (decoded && Array.isArray(decoded)) {
-    try {
-      localStorage.setItem("tt_class_timetable", JSON.stringify(decoded));
-    } catch (_) {
-    }
-    applyRemoteTimetable(decoded);
-    setSyncHint("Loaded class timetable");
+      try {
+        localStorage.setItem("tt_class_timetable", JSON.stringify(decoded));
+      } catch (_) {
+      }
+      applyRemoteTimetable(decoded);
+      setSyncHint("Loaded class timetable");
     } else {
-    setSyncHint("No class timetable yet (teacher can publish)");
+      setSyncHint("No class timetable yet (teacher can publish)");
     }
   } else {
     setSyncHint("No class timetable yet (teacher can publish)");
@@ -478,13 +611,12 @@ async function loadCloudTimetables() {
 }
 
 function applyRemoteTimetable(remote) {
-  if (!Array.isArray(remote) || remote.length !== timetable.length) return;
+  if (!Array.isArray(remote) || remote.length !== days.length) return;
+  const slotCount = getActiveTimes().length;
   for (let i = 0; i < remote.length; i++) {
-    if (!Array.isArray(remote[i]) || remote[i].length !== timetable[i].length) return;
+    if (!Array.isArray(remote[i]) || remote[i].length !== slotCount) return;
   }
-  for (let i = 0; i < timetable.length; i++) {
-    timetable[i] = remote[i].map(v => String(v));
-  }
+  timetable = remote.map(r => r.map(v => String(v)));
   saveTimetable();
   buildTable();
   updateUI();
@@ -496,6 +628,7 @@ async function savePersonalTimetable() {
     const timetableByDay = encodeTimetableForFirestore(timetable);
     await fb.db.collection("personalTimetables").doc(fb.user.uid).set({
       timetableByDay,
+      templateId: activeTemplateId,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
     setSyncHint("Saved personal timetable");
@@ -515,6 +648,7 @@ async function publishClassTimetable() {
     const timetableByDay = encodeTimetableForFirestore(timetable);
     await fb.db.collection("classTimetables").doc(key).set({
       timetableByDay,
+      templateId: activeTemplateId,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedBy: fb.user.uid
     }, { merge: true });
@@ -536,29 +670,18 @@ function loadTimetable() {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return;
-    if (parsed.length !== timetable.length) return;
+    if (parsed.length !== days.length) return;
+    const slotCount = getActiveTimes().length;
     for (let i = 0; i < parsed.length; i++) {
-      if (!Array.isArray(parsed[i]) || parsed[i].length !== timetable[i].length) return;
+      if (!Array.isArray(parsed[i]) || parsed[i].length !== slotCount) return;
     }
-    for (let i = 0; i < timetable.length; i++) {
-      timetable[i] = parsed[i].map(v => String(v));
-    }
+    timetable = parsed.map(r => r.map(v => String(v)));
   } catch (_) {
   }
 }
 
 function applyBlankTimetable() {
-  for (let d = 0; d < timetable.length; d++) {
-    for (let s = 0; s < times.length; s++) {
-      if (s === 5) {
-        timetable[d][s] = "Lunch";
-      } else if (s === 2 || s === 8) {
-        timetable[d][s] = "Break";
-      } else {
-        timetable[d][s] = "";
-      }
-    }
-  }
+  timetable = getActiveBlankTimetable();
 }
 
 function clearLocalTimetables() {
@@ -572,6 +695,7 @@ function clearLocalTimetables() {
 function saveTimetable() {
   try {
     localStorage.setItem("tt_timetable", JSON.stringify(timetable));
+    localStorage.setItem("tt_template", activeTemplateId);
   } catch (_) {
   }
 }
@@ -582,7 +706,8 @@ function classKeyFromProfile(profile) {
   const year = String(profile.year || "").trim().toUpperCase();
   const sem = String(profile.sem || "").trim().toUpperCase();
   if (!dept || !year || !sem) return null;
-  return `${dept}_${year}_${sem}`;
+  const templateId = resolveTemplateId(profile);
+  return `${dept}_${year}_${sem}_${templateId}`;
 }
 
 function setSyncHint(text) {
@@ -637,13 +762,15 @@ function focusFirstEditableCell() {
 
 function startEditing(td) {
   if (!td) return;
+  if (!settings.edit) return;
   if (td.classList.contains("pause")) return;
   const row = td.closest("tr");
   if (!row || !row.dataset.day) return;
   const dayIndex = Number(row.dataset.day);
   const slotIndex = Number(td.dataset.slot || "-1");
   if (dayIndex < 0 || dayIndex >= timetable.length) return;
-  if (slotIndex < 0 || slotIndex >= times.length) return;
+  const t = getActiveTimes();
+  if (slotIndex < 0 || slotIndex >= t.length) return;
 
   const current = normalizeSlotLabel(slotIndex, timetable[dayIndex][slotIndex]);
   if (!isEditableLabel(current)) return;
@@ -763,7 +890,8 @@ function normalizeSlotLabel(slotIndex, value) {
   const v = String(value || "").trim();
   const isBreak = v.toLowerCase().includes("break");
   if (!isBreak) return v;
-  if (slotIndex === 5) return "Lunch";
+  const lower = v.toLowerCase();
+  if (lower.includes("lunch")) return "Lunch";
   return "Break";
 }
 
@@ -779,7 +907,8 @@ function isPauseLabel(v) {
 
 function buildHeaderLabels() {
   let p = 0;
-  return times.map((_, i) => {
+  const t = getActiveTimes();
+  return t.map((_, i) => {
     const sample = normalizeSlotLabel(i, timetable[0][i]);
     if (isPauseLabel(sample)) return sample;
     p += 1;
@@ -789,7 +918,8 @@ function buildHeaderLabels() {
 
 function computeVerticalMergeSlots(normalized) {
   const slots = new Set();
-  for (let s = 0; s < times.length; s++) {
+  const t = getActiveTimes();
+  for (let s = 0; s < t.length; s++) {
     const first = normalized[0][s];
     if (!isPauseLabel(first)) continue;
     let allSame = true;
@@ -810,8 +940,9 @@ function keyFor(dayIndex, slotIndex) {
 
 function currentPeriodIndex() {
   const n = nowMin();
-  for (let i = 0; i < times.length; i++) {
-    if (n >= toMin(times[i][0]) && n < toMin(times[i][1])) return i;
+  const t = getActiveTimes();
+  for (let i = 0; i < t.length; i++) {
+    if (n >= toMin(t[i][0]) && n < toMin(t[i][1])) return i;
   }
   return -1;
 }
@@ -827,9 +958,10 @@ function buildTable() {
   const normalized = timetable.map(row => row.map((v, i) => normalizeSlotLabel(i, v)));
   const headerLabels = buildHeaderLabels();
   const verticalMergeSlots = computeVerticalMergeSlots(normalized);
+  const t = getActiveTimes();
 
   const header = document.createElement("tr");
-  header.innerHTML = "<th>Day</th>" + times.map((_, i) => {
+  header.innerHTML = "<th>Day</th>" + t.map((_, i) => {
     const top = headerLabels[i];
     return `<th><div class="th-top">${top}</div></th>`;
   }).join("");
@@ -913,7 +1045,8 @@ function updateUI() {
   const subjectLabel = normalizeSlotLabel(periodIndex, timetable[dayIndex][periodIndex]);
   const subject = subjectLabel || "Free";
   const isBreak = isPauseLabel(subjectLabel);
-  const [start, end] = times[periodIndex];
+  const t = getActiveTimes();
+  const [start, end] = t[periodIndex];
   const nowMinutes = nowMin();
   const { elapsed, total, percent } = periodProgress(start, end, nowMinutes);
   const remaining = Math.max(total - elapsed, 0);
@@ -980,7 +1113,8 @@ function triggerVibrate() {
 function triggerNotify(dayIndex, periodIndex, subject) {
   if (!("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
-  const [start, end] = times[periodIndex];
+  const t = getActiveTimes();
+  const [start, end] = t[periodIndex];
   const title = subject;
   const body = `${days[dayIndex]} • ${formatRange(start, end)}`;
   try {
@@ -990,10 +1124,11 @@ function triggerNotify(dayIndex, periodIndex, subject) {
 }
 
 function nextUp(dayIndex, currentSlot) {
-  for (let i = currentSlot + 1; i < times.length; i++) {
+  const t = getActiveTimes();
+  for (let i = currentSlot + 1; i < t.length; i++) {
     const label = normalizeSlotLabel(i, timetable[dayIndex][i]);
     if (!label) continue;
-    return `${label} (${formatTime12(times[i][0])})`;
+    return `${label} (${formatTime12(t[i][0])})`;
   }
   return null;
 }
@@ -1004,7 +1139,7 @@ function scheduleNextBoundary() {
   const n = nowMin();
   let next = null;
 
-  for (let t of times) {
+  for (let t of getActiveTimes()) {
     const end = toMin(t[1]);
     if (end > n) {
       next = end;
@@ -1063,16 +1198,190 @@ function initTabs() {
   activate(currentTab, { force: true });
 }
 
+let tableZoom = 1;
+const minTableZoom = 0.55;
+const maxTableZoom = 1.25;
+const tableZoomStep = 0.1;
+const tableMenuIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 7h14v2H5V7zm0 4h14v2H5v-2zm0 4h14v2H5v-2z"/></svg>';
+const tableCloseIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5z"/></svg>';
+const tableEditIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zm3.92 2.33H5v-1.92l9.06-9.06 1.92 1.92-9.06 9.06zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg><span class="sr-only">Enable editing</span>';
+const tableSaveIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h12.2L21 6.8V21H5V3zm2 2v14h12V7.62L16.38 5H16v5H8V5H7zm3 0v3h4V5h-4zm-1 9h8v2H9v-2z"/></svg><span class="sr-only">Save timetable changes</span>';
+
+function clampTableZoom(value) {
+  return Math.min(maxTableZoom, Math.max(minTableZoom, value));
+}
+
+function setTableZoom(value) {
+  tableZoom = clampTableZoom(value);
+  const wrapper = document.getElementById("tableWrapper");
+  if (wrapper) wrapper.style.setProperty("--table-zoom", tableZoom.toFixed(2));
+}
+
+function fitTableToView() {
+  const wrapper = document.getElementById("tableWrapper");
+  const scroller = wrapper ? wrapper.querySelector(".table-scroll") : null;
+  const table = document.getElementById("table");
+  if (!wrapper || !scroller || !table) return;
+
+  wrapper.style.setProperty("--table-zoom", "1");
+  const naturalWidth = table.getBoundingClientRect().width;
+  const availableWidth = scroller.clientWidth;
+  const fittedZoom = naturalWidth > 0 ? availableWidth / naturalWidth : tableZoom;
+  setTableZoom(Math.min(1, fittedZoom));
+  scroller.scrollLeft = 0;
+}
+
+function updateTableFullscreenState(isFullscreen) {
+  const wrapper = document.getElementById("tableWrapper");
+  const button = document.getElementById("tableFullscreenBtn");
+  if (!wrapper) return;
+
+  wrapper.classList.toggle("table-fullscreen", isFullscreen);
+  wrapper.classList.toggle("landscape-fallback", false);
+  document.body.classList.toggle("table-lock-scroll", isFullscreen);
+
+  if (!isFullscreen && screen.orientation && screen.orientation.unlock) {
+    try {
+      screen.orientation.unlock();
+    } catch (_) {
+    }
+  }
+
+  if (button) {
+    button.setAttribute("aria-label", isFullscreen ? "Exit timetable fullscreen" : "Open timetable fullscreen");
+  }
+
+  if (isFullscreen && window.matchMedia("(max-width: 700px)").matches) {
+    fitTableToView();
+  }
+}
+
+async function lockLandscapeIfPossible(wrapper) {
+  if (screen.orientation && screen.orientation.lock) {
+    try {
+      await screen.orientation.lock("landscape");
+      return true;
+    } catch (_) {
+    }
+  }
+
+  if (window.matchMedia("(max-width: 700px) and (orientation: portrait)").matches) {
+    wrapper.classList.add("landscape-fallback");
+  }
+  return false;
+}
+
+async function toggleTableFullscreen() {
+  const wrapper = document.getElementById("tableWrapper");
+  if (!wrapper) return;
+
+  const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fullscreenElement === wrapper || wrapper.classList.contains("table-fullscreen")) {
+    if (document.exitFullscreen) {
+      await document.exitFullscreen().catch(() => {});
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else {
+      updateTableFullscreenState(false);
+    }
+    if (fullscreenElement !== wrapper) updateTableFullscreenState(false);
+    return;
+  }
+
+  updateTableFullscreenState(true);
+
+  if (wrapper.requestFullscreen) {
+    await wrapper.requestFullscreen().catch(() => {});
+  } else if (wrapper.webkitRequestFullscreen) {
+    wrapper.webkitRequestFullscreen();
+  }
+
+  await lockLandscapeIfPossible(wrapper);
+}
+
+async function saveTableEditsAndExit(btn) {
+  commitEditing();
+  saveTimetable();
+
+  if (btn) btn.disabled = true;
+  try {
+    if (fb.user && fb.db) {
+      await savePersonalTimetable();
+    } else {
+      setSyncHint("Saved locally. Login to sync.");
+    }
+    setEditMode(false, { silentHint: true });
+  } catch (_) {
+    setEditMode(false, { silentHint: true });
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 function initHomeView() {
+  const tableActions = document.querySelector(".table-actions");
+  const tableToolsBtn = document.getElementById("tableToolsBtn");
+  if (tableToolsBtn && tableActions) {
+    tableToolsBtn.addEventListener("click", () => {
+      const isOpen = !tableActions.classList.contains("is-open");
+      tableActions.classList.toggle("is-open", isOpen);
+      tableToolsBtn.innerHTML = isOpen ? tableCloseIcon : tableMenuIcon;
+      tableToolsBtn.setAttribute("aria-expanded", String(isOpen));
+      tableToolsBtn.setAttribute("aria-label", isOpen ? "Hide timetable controls" : "Show timetable controls");
+    });
+  }
+
   const tableEditBtns = Array.from(document.querySelectorAll(".table-edit-btn"));
   if (tableEditBtns.length) {
     tableEditBtns.forEach(btn => {
       btn.addEventListener("click", () => {
-        setEditMode(!settings.edit);
-        updateHomeEmptyHint();
+        if (settings.edit) {
+          saveTableEditsAndExit(btn);
+        } else {
+          setEditMode(true);
+          updateHomeEmptyHint();
+        }
       });
     });
   }
+
+  const fullscreenBtn = document.getElementById("tableFullscreenBtn");
+  if (fullscreenBtn) {
+    fullscreenBtn.addEventListener("click", () => {
+      toggleTableFullscreen();
+    });
+  }
+
+  const zoomOutBtn = document.getElementById("tableZoomOutBtn");
+  if (zoomOutBtn) {
+    zoomOutBtn.addEventListener("click", () => {
+      setTableZoom(tableZoom - tableZoomStep);
+    });
+  }
+
+  const zoomFitBtn = document.getElementById("tableZoomFitBtn");
+  if (zoomFitBtn) {
+    zoomFitBtn.addEventListener("click", () => {
+      fitTableToView();
+    });
+  }
+
+  const zoomInBtn = document.getElementById("tableZoomInBtn");
+  if (zoomInBtn) {
+    zoomInBtn.addEventListener("click", () => {
+      setTableZoom(tableZoom + tableZoomStep);
+    });
+  }
+
+  document.addEventListener("fullscreenchange", () => {
+    const wrapper = document.getElementById("tableWrapper");
+    updateTableFullscreenState(document.fullscreenElement === wrapper);
+  });
+
+  document.addEventListener("webkitfullscreenchange", () => {
+    const wrapper = document.getElementById("tableWrapper");
+    updateTableFullscreenState(document.webkitFullscreenElement === wrapper);
+  });
 
   const clearAllText = document.getElementById("clearAllText");
   if (clearAllText) {
@@ -1230,8 +1539,9 @@ function updateEditControls() {
 
   tableEditBtns.forEach(btn => {
     btn.classList.toggle("on", settings.edit);
-    btn.setAttribute("aria-label", settings.edit ? "Disable editing" : "Enable editing");
-    btn.title = settings.edit ? "Editing enabled" : "Enable editing";
+    btn.innerHTML = settings.edit ? tableSaveIcon : tableEditIcon;
+    btn.setAttribute("aria-label", settings.edit ? "Save timetable changes" : "Enable editing");
+    btn.title = settings.edit ? "Save changes" : "Enable editing";
   });
 
   document.body.classList.toggle("editing-active", settings.edit);
@@ -1247,9 +1557,10 @@ function enforceLoggedOutDefaults() {
   buildTable();
   updateUI();
 
-  setEditMode(true, { silentHint: true, force: true });
+  setEditMode(false, { silentHint: true, force: true });
   setSyncHint("Logged out • Edit mode enabled — tap a cell to start (login to sync)");
   updateHomeEmptyHint();
+  setSyncHint("Logged out - tap the edit button to change timetable (login to sync)");
 }
 
 function updateProfileHero() {
@@ -1288,8 +1599,15 @@ function updateProfileHero() {
   avatarEl.dataset.initial = initial;
 }
 
+let appInitialized = false;
+
 function init() {
+  if (appInitialized) return;
+  appInitialized = true;
+
+  loadTemplateFromLocal();
   loadSettings();
+  settings.edit = false;
   loadTimetable();
   enforceLoggedOutDefaults();
   buildTable();
@@ -1550,19 +1868,25 @@ async function refreshPublishedTimetables(force) {
     const items = [];
     snap.forEach(doc => {
       const data = doc.data() || {};
-      const decoded = Array.isArray(data.timetable) ? data.timetable : decodeTimetableFromFirestore(data);
-      if (!decoded) return;
-      const parsed = parseClassKey(doc.id);
+      const decoded = Array.isArray(data.timetable)
+        ? data.timetable
+        : decodeTimetableFromFirestore(data);
+
+      if (!decoded || !Array.isArray(decoded)) return;
+
+      const metaParts = parseClassKey(doc.id);
+      const templateId = String(data.templateId || "").trim().toLowerCase();
       items.push({
         id: doc.id,
-        dept: parsed.dept,
-        year: parsed.year,
-        sem: parsed.sem,
-        updatedAt: data.updatedAt || null,
-        updatedBy: data.updatedBy || "",
-        timetable: decoded
+        dept: metaParts.dept,
+        year: metaParts.year,
+        sem: metaParts.sem,
+        templateId: templates[templateId] ? templateId : "default",
+        timetable: decoded,
+        updatedAt: data.updatedAt || null
       });
     });
+
     published.items = items;
     published.loadedAt = now;
     renderPublishedTimetables();
@@ -1666,6 +1990,9 @@ function renderPublishedTimetables() {
       btn.appendChild(chip);
 
       btn.addEventListener("click", () => {
+        if (it.templateId && templates[it.templateId]) {
+          setActiveTemplate(it.templateId, { resetTimetable: true });
+        }
         applyRemoteTimetable(it.timetable);
         try {
           localStorage.setItem("tt_class_timetable", JSON.stringify(it.timetable));
@@ -1720,7 +2047,7 @@ function loadSettings() {
         theme: parsed.theme || settings.theme,
         vibrate: Boolean(parsed.vibrate),
         notify: Boolean(parsed.notify),
-        edit: Boolean(parsed.edit)
+        edit: false
       };
     } catch (_) {
     }
@@ -1794,10 +2121,7 @@ function initDrawer() {
   });
 
   if (editToggle) editToggle.addEventListener("click", () => {
-    settings.edit = !settings.edit;
-    setToggleState(editToggle, settings.edit);
-    saveSettings();
-    if (!settings.edit) commitEditing();
+    setEditMode(!settings.edit);
     if (settings.edit && (!fb.enabled || !fb.user)) {
       setSyncHint("Edit mode enabled (local only). Login to sync.");
     }
@@ -1851,4 +2175,8 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-window.onload = init;
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, { once: true });
+} else {
+  init();
+}

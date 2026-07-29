@@ -268,3 +268,6 @@ Open:
 - `index.html` – UI, settings drawer, Firebase SDK scripts
 - `styles.css` – premium UI styling
 - `script.js` – timetable logic + editing + settings + Firebase Auth/Firestore sync
+
+
+for only first year in both I and II sem, there is different timing (times[]) and schedule (timetable template like this "","","Break","", in timetable array) and for "BPT" DEPARTMENT they follow different so i want a seperate timming for these two(bpt and  first year in both I and II sem except bpt). just name timetable2 = [[]],.. times2 = [[]] and let user select thier timetable template in caret to choose between timetable template sync with firebase and cross check firebase rules and everything is sync without affecting already working 

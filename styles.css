@@ -32,6 +32,10 @@
 html {
   height: 100%;
   -webkit-text-size-adjust: 100%;
+   user-select: none; /* Standard syntax */
+    -webkit-user-select: none; /* Safari and Chrome */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
 }
 
 html[data-theme="dark"] {
@@ -117,6 +121,19 @@ body {
   gap: 24px;
 }
 
+@media (min-width: 900px) {
+  #tabHome {
+    width: min(100%, 1607px);
+    justify-self: center;
+  }
+
+  #tabExplore,
+  #tabProfile {
+    width: min(100%, 1080px);
+    justify-self: center;
+  }
+}
+
 @media (max-width: 700px) {
   .tabs {
     padding: 16px 16px calc(140px + env(safe-area-inset-bottom));
@@ -170,7 +187,7 @@ body {
  }
 
  .header-dash {
-  width: min(980px, 100%);
+  width: 100%;
   display: grid;
   grid-template-columns: 1.35fr 0.65fr;
   gap: 12px;
@@ -192,7 +209,7 @@ body {
  }
 
  .dash-card:active {
-  transform: scale(0.985);
+  transform: scale(0.885);
  }
 
  .dash-card::after {
@@ -366,7 +383,9 @@ body {
 
 .explore-search,
 .explore-sort {
-  padding: 10px 16px;
+  padding: 6px 14px;
+  line-height: 1.2;
+  min-height: 44px;
   border-radius: 18px;
   border: 1px solid var(--glass_border_soft);
   background: var(--glass_bg_soft);
@@ -1105,18 +1124,6 @@ body {
   cursor: pointer;
 }
 
- .table-clear {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  margin: 0;
-  font-size: 12px;
-  font-weight: 800;
-  color: #d94b4b;
-  cursor: pointer;
-  user-select: none;
- }
-
 @keyframes hintPop {
   from {
     transform: translateY(6px);
@@ -1536,13 +1543,14 @@ html[data-theme="dark"] .progress-fill {
 
 
 .table-wrapper {
+  --table-zoom: 1;
   overflow: hidden;
   background: var(--panel);
   border-radius: 20px;
   box-shadow: var(--shadow);
   animation: rise 0.7s ease;
   position: relative;
-  padding: 52px 12px 14px;
+  padding: 64px 12px 14px;
 }
 
  .table-scroll {
@@ -1585,13 +1593,31 @@ table {
   min-width: max-content;
   border-collapse: collapse;
   margin: 0;
+  zoom: var(--table-zoom);
 }
 
+.table-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  z-index: 12;
+}
 
-.table-edit-btn {
-  position: fixed;
-  top: 18px;
-  right: clamp(16px, 6vw, 36px);
+.table-tools-btn {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.table-control-btn {
   width: 38px;
   height: 38px;
   border-radius: 18px;
@@ -1602,45 +1628,186 @@ table {
   color: #f6f6f6;
   cursor: pointer;
   box-shadow: 0 14px 32px rgba(15, 17, 20, 0.25);
-  transition: transform 0.22s ease, background 0.24s ease, color 0.24s ease;
-  z-index: 12;
+  transition: transform 0.18s ease;
 }
 
-.table-edit-btn svg {
+.table-control-btn.table-tools-btn {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.table-control-btn svg {
   width: 19px;
   height: 19px;
 }
 
-.table-edit-btn:active {
+.table-control-btn:active {
   transform: scale(0.94);
 }
 
+.table-actions:not(.is-open) .table-tool {
+  display: none;
+}
+
+.table-actions.is-open .table-tool {
+  animation: tableToolIn 0.22s ease both;
+}
+
+.table-actions.is-open .table-tool:nth-of-type(1) {
+  animation-delay: 0.02s;
+}
+
+.table-actions.is-open .table-tool:nth-of-type(2) {
+  animation-delay: 0.04s;
+}
+
+.table-actions.is-open .table-tool:nth-of-type(3) {
+  animation-delay: 0.06s;
+}
+
+.table-actions.is-open .table-tool:nth-of-type(4) {
+  animation-delay: 0.08s;
+}
+
+.table-actions.is-open .table-tool:nth-of-type(5) {
+  animation-delay: 0.10s;
+}
+
+.table-actions.is-open .table-tool:nth-of-type(6) {
+  animation-delay: 0.12s;
+}
+
+.table-actions.is-open {
+  left: 12px;
+  justify-content: flex-end;
+}
+
+.table-clear-btn {
+  color: #ff6969;
+}
+
 .table-edit-btn.on {
-  background: rgba(255, 255, 255, .3);
-  border-color: rgba(120, 120, 120, 0.30);
-  color: var(--text);
+  border-color: rgba(120, 120, 120, 0.46);
 }
 
 .table-edit-btn.on svg {
   transform: rotate(-1deg);
 }
 
+.table-wrapper.table-fullscreen {
+  display: grid;
+  grid-template-rows: 1fr;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  border-radius: 0;
+  padding: 64px 14px 18px;
+  background: var(--panel);
+}
+
+.table-wrapper.table-fullscreen .table-scroll {
+  align-self: center;
+  max-height: calc(100vh - 82px);
+  max-height: calc(100dvh - 82px);
+  overflow: auto;
+}
+
+.table-wrapper.table-fullscreen table {
+  min-width: max-content;
+}
+
+.table-wrapper.table-fullscreen .table-fullscreen-btn {
+  border-color: rgba(120, 120, 120, 0.46);
+}
+
+body.table-lock-scroll {
+  overflow: hidden;
+}
+
+@keyframes tableToolIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 @media (max-width: 700px) {
   .table-wrapper {
-    padding: 84px 14px 18px;
+    padding: 76px 14px 18px;
   }
 
-  .table-edit-btn {
-    top: 20px;
-    right: 18px;
-    width: 52px;
-    height: 52px;
-    border-radius: 20px;
+  .table-actions {
+    top: 14px;
+    right: 14px;
+    left: auto;
+    justify-content: flex-end;
+    gap: 7px;
   }
 
-  .table-edit-btn svg {
-    width: 26px;
-    height: 26px;
+  .table-actions.is-open {
+    left: 14px;
+    justify-content: space-between;
+  }
+
+  .table-tools-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 16px;
+  }
+
+  .table-control-btn {
+    width: clamp(36px, 10vw, 44px);
+    height: clamp(36px, 10vw, 44px);
+    border-radius: 18px;
+  }
+
+  .table-control-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .table-tools-btn svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .table-scroll {
+    overscroll-behavior-x: contain;
+  }
+
+  .table-wrapper.table-fullscreen {
+    padding: 82px 12px 14px;
+  }
+
+  .table-wrapper.table-fullscreen .table-scroll {
+    max-height: calc(100vh - 96px);
+    max-height: calc(100dvh - 96px);
+  }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .table-wrapper.table-fullscreen.landscape-fallback {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 100vh;
+    width: 100dvh;
+    height: 100vw;
+    height: 100dvw;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center;
+    z-index: 100;
+  }
+
+  .table-wrapper.table-fullscreen.landscape-fallback .table-scroll {
+    max-height: calc(100vw - 96px);
+    max-height: calc(100dvw - 96px);
   }
 }
 
@@ -1867,4 +2034,10 @@ td.editing::after {
   .progress-meta {
     font-size: 18px;
   }
+}
+.github-button {
+  background: var(--panel);
+  border-radius: 20px;
+
+
 }
