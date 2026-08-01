@@ -1,275 +1,322 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Timetable Timer</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='10' y='12' width='44' height='42' rx='10' fill='%231e4bd8'/%3E%3Cpath d='M20 26h24v6H20zm0 12h16v6H20z' fill='white'/%3E%3Cpath d='M22 10v8M42 10v8' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css">
-<script async defer src="https://buttons.github.io/buttons.js"></script>
-<!-- <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timetable Timer</title>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='10' y='12' width='44' height='42' rx='10' fill='%231e4bd8'/%3E%3Cpath d='M20 26h24v6H20zm0 12h16v6H20z' fill='white'/%3E%3Cpath d='M22 10v8M42 10v8' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
+
 <body>
-<div class="app">
-  <main class="tabs">
-    <section class="tab-view active" id="tabHome" aria-labelledby="tabBtnHome">
-      <div class="header">
+  <div class="app">
+    <main class="tabs">
+      <section class="tab-view active" id="tabHome" aria-labelledby="tabBtnHome">
+        <!-- <div class="header"> -->
         <div class="header-dash">
           <div class="dash-card dash-left" aria-label="Current subject">
+
             <div class="current-title" id="currentTitle">--</div>
             <div class="current-sub" id="currentSub">--</div>
-            <div class="subline" id="periodMeta">--</div>
+            <div class="subline" id="periodMeta">-- </div>
+
+            <div class="progress-track">
+              <div class="progress-fill" id="progressFill"></div>
+
+            </div>
           </div>
           <div class="dash-card dash-right" aria-label="Time">
-            <div class="clock" id="clock">--:--</div>
-            <div id="status">Loading</div>
-          </div>
-        </div>
-      </div>
-      <div class="progress-wrap">
-        <div class="progress-track">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <div class="progress-meta" id="progressMeta">--</div>
-      </div>
-      <p class="home-empty-hint"  id="homeEmptyHint" style="display:none"></p>
-      <div class="table-wrapper" id="tableWrapper">
-        <div class="table-actions" aria-label="Timetable controls">
+
+            <div class="cat-wrapper">
+              <img id="cat" src="./assets/cat_lofi.gif" alt="Sleeping cat" loading="lazy" decoding="async" width="200"
+                height="100">
+            </div>
+
           
-          <button class="table-control-btn table-tool table-edit-btn" id="tableEditBtn" type="button" aria-label="Enable editing">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zm3.92 2.33H5v-1.92l9.06-9.06 1.92 1.92-9.06 9.06zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-            </svg>
-            <span class="sr-only">Toggle editing</span>
-          </button>
-          <button class="table-control-btn table-tool table-fullscreen-btn" id="tableFullscreenBtn" type="button" aria-label="Open timetable fullscreen">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M4 4h7v2H7.41l4.3 4.29-1.42 1.42L6 7.41V11H4V4zm9 0h7v7h-2V7.41l-4.29 4.3-1.42-1.42L16.59 6H13V4zM4 13h2v3.59l4.29-4.3 1.42 1.42L7.41 18H11v2H4v-7zm15 0h2v7h-7v-2h3.59l-4.3-4.29 1.42-1.42 4.29 4.3V13z"/>
-            </svg>
-          </button>
-          <button class="table-control-btn table-tool table-zoom-btn" id="tableZoomFitBtn" type="button" aria-label="Fit timetable to screen">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M4 6h16v2H4V6zm2 4h12v2H6v-2zm3 4h6v2H9v-2z"/>
-            </svg>
-          </button>
-          <button class="table-control-btn table-tool table-zoom-btn" id="tableZoomOutBtn" type="button" aria-label="Zoom timetable out">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M10.5 4a6.5 6.5 0 0 1 5.16 10.45l4.45 4.44-1.42 1.42-4.44-4.45A6.5 6.5 0 1 1 10.5 4zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM8 10h5v2H8v-2z"/>
-            </svg>
-          </button>
-          <button class="table-control-btn table-tool table-zoom-btn" id="tableZoomInBtn" type="button" aria-label="Zoom timetable in">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M10.5 4a6.5 6.5 0 0 1 5.16 10.45l4.45 4.44-1.42 1.42-4.44-4.45A6.5 6.5 0 1 1 10.5 4zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM8 10h2V8h2v2h2v2h-2v2h-2v-2H8v-2z"/>
-            </svg>
-          </button>
-          <button class="table-control-btn table-tool table-clear-btn" id="clearAllText" type="button" aria-label="Clear all timetable subjects">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2zm-2 6h10l-.8 12H7.8L7 9zm3 2v8h2v-8h-2zm4 0v8h2v-8h-2z"/>
-            </svg>
-          </button>
-          <button class="table-control-btn table-tools-btn" id="tableToolsBtn" type="button" aria-label="Show timetable controls" aria-expanded="false">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M5 7h14v2H5V7zm0 4h14v2H5v-2zm0 4h14v2H5v-2z"/>
-            </svg>
-          </button>
-        </div>
-        <div class="table-scroll">
-          <table id="table"></table>
-        </div>
-      </div>
-      
-    </section>
+              <div><div class="clock" id="clock">--:--</div>
 
-    <section class="tab-view" id="tabExplore" aria-labelledby="tabBtnExplore">
-      <div class="explore-head">
-        <div class="explore-title">Published timetables</div>
-        <button class="explore-refresh" id="homeRefresh" type="button" aria-label="Refresh published timetables">Refresh</button>
-      </div>
-      <div class="explore-controls">
-        <input class="explore-search" id="homeSearch" type="search" placeholder="Search dept / year / sem" autocomplete="off">
-        <select class="explore-sort" id="homeSort" aria-label="Sort published timetables">
-          <option value="recent">Recent</option>
-          <option value="dept">Department</option>
-          <option value="year">Year</option>
-          <option value="sem">Semester</option>
-        </select>
-      </div>
-      <div class="explore-meta" id="homeMeta">--</div>
-      <div class="explore-list" id="homeList"></div>
-    </section>
+              <!-- <div class="tenor-gif-embed" data-postid="15384590541349796123" data-share-method="host" data-aspect-ratio="1.992" data-width="100%"><a href="https://tenor.com/view/waal-boyss-nabilaa-awall-gif-15384590541349796123">Waal Boyss Nabilaa Sticker</a>from <a href="https://tenor.com/search/waal+boyss-stickers">Waal Boyss Stickers</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script> -->
+              <div id="status">Loading</div></div>
+            
 
-    <section class="tab-view" id="tabProfile" aria-labelledby="tabBtnProfile">
-      <div class="profile-hero">
-        <div class="profile-avatar" id="profileAvatar" aria-hidden="true">
-          <span id="profileAvatarInitial">?</span>
-        </div>
-        <div class="profile-hero-text">
-          <div class="profile-hero-name" id="profileHeroName">Guest</div>
-          <div class="profile-hero-email" id="profileHeroEmail">Sign in to personalise your timetable</div>
-          
-        </div>
-      </div>
 
-      <div class="profile-card">
-        <div class="profile-card-title">Account access</div>
-        <div class="auth-status" id="authStatus">Not signed in</div>
-        <div class="auth-form" id="authForm">
-          <input class="auth-input" id="authEmail" type="email" placeholder="Email" autocomplete="email">
-          <input class="auth-input" id="authPassword" type="password" placeholder="Password" autocomplete="current-password">
+          </div>
+
+        </div>
+
+        <!-- </div> -->
+        <!-- <div class="progress-wrap"> -->
+        <!-- </div> -->
+        <p class="home-empty-hint" id="homeEmptyHint" style="display:none"></p>
+        <div class="table-wrapper" id="tableWrapper">
+          <div class="table-actions" aria-label="Timetable controls">
+
+            <!-- <div class="progress-meta" id="">--</div> -->
+            <button class="table-control-btn table-tool table-edit-btn" id="tableEditBtn" type="button"
+              aria-label="Enable editing">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor"
+                  d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zm3.92 2.33H5v-1.92l9.06-9.06 1.92 1.92-9.06 9.06zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+              </svg>
+              <span class="sr-only">Toggle editing</span>
+            </button>
+            <button class="table-control-btn table-tool table-fullscreen-btn" id="tableFullscreenBtn" type="button"
+              aria-label="Open timetable fullscreen">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor"
+                  d="M4 4h7v2H7.41l4.3 4.29-1.42 1.42L6 7.41V11H4V4zm9 0h7v7h-2V7.41l-4.29 4.3-1.42-1.42L16.59 6H13V4zM4 13h2v3.59l4.29-4.3 1.42 1.42L7.41 18H11v2H4v-7zm15 0h2v7h-7v-2h3.59l-4.3-4.29 1.42-1.42 4.29 4.3V13z" />
+              </svg>
+            </button>
+            <button class="table-control-btn table-tool table-zoom-btn" id="tableZoomFitBtn" type="button"
+              aria-label="Fit timetable to screen">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M4 6h16v2H4V6zm2 4h12v2H6v-2zm3 4h6v2H9v-2z" />
+              </svg>
+            </button>
+            <button class="table-control-btn table-tool table-zoom-btn" id="tableZoomOutBtn" type="button"
+              aria-label="Zoom timetable out">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor"
+                  d="M10.5 4a6.5 6.5 0 0 1 5.16 10.45l4.45 4.44-1.42 1.42-4.44-4.45A6.5 6.5 0 1 1 10.5 4zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM8 10h5v2H8v-2z" />
+              </svg>
+            </button>
+            <button class="table-control-btn table-tool table-zoom-btn" id="tableZoomInBtn" type="button"
+              aria-label="Zoom timetable in">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor"
+                  d="M10.5 4a6.5 6.5 0 0 1 5.16 10.45l4.45 4.44-1.42 1.42-4.44-4.45A6.5 6.5 0 1 1 10.5 4zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM8 10h2V8h2v2h2v2h-2v2h-2v-2H8v-2z" />
+              </svg>
+            </button>
+            <button class="table-control-btn table-tool table-clear-btn" id="clearAllText" type="button"
+              aria-label="Clear all timetable subjects">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor"
+                  d="M9 3h6l1 2h4v2H4V5h4l1-2zm-2 6h10l-.8 12H7.8L7 9zm3 2v8h2v-8h-2zm4 0v8h2v-8h-2z" />
+              </svg>
+            </button>
+            <button class="table-control-btn table-tools-btn" id="tableToolsBtn" type="button"
+              aria-label="Show timetable controls" aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M5 7h14v2H5V7zm0 4h14v2H5v-2zm0 4h14v2H5v-2z" />
+              </svg>
+            </button>
+          </div>
+          <div class="table-scroll">
+            <table id="table"></table>
+          </div>
+        </div>
+
+      </section>
+
+      <section class="tab-view" id="tabExplore" aria-labelledby="tabBtnExplore">
+        <div class="explore-head">
+          <div class="explore-title">Published timetables</div>
+          <button class="explore-refresh" id="homeRefresh" type="button"
+            aria-label="Refresh published timetables">Refresh</button>
+        </div>
+        <div class="explore-controls">
+          <input class="explore-search" id="homeSearch" type="search" placeholder="Search dept / year / sem"
+            autocomplete="off">
+          <select class="explore-sort" id="homeSort" aria-label="Sort published timetables">
+            <option value="recent">Recent</option>
+            <option value="dept">Department</option>
+            <option value="year">Year</option>
+            <option value="sem">Semester</option>
+          </select>
+        </div>
+        <div class="explore-meta" id="homeMeta">--</div>
+        <div class="explore-list" id="homeList"></div>
+      </section>
+
+      <section class="tab-view" id="tabProfile" aria-labelledby="tabBtnProfile">
+        <div class="profile-hero">
+          <div class="profile-avatar" id="profileAvatar" aria-hidden="true">
+            <span id="profileAvatarInitial">?</span>
+          </div>
+          <div class="profile-hero-text">
+            <div class="profile-hero-name" id="profileHeroName">Guest</div>
+            <div class="profile-hero-email" id="profileHeroEmail">Sign in to personalise your timetable</div>
+
+          </div>
+        </div>
+
+        <div class="profile-card">
+          <div class="profile-card-title">Account access</div>
+          <div class="auth-status" id="authStatus">Not signed in</div>
+          <div class="auth-form" id="authForm">
+            <input class="auth-input" id="authEmail" type="email" placeholder="Email" autocomplete="email">
+            <input class="auth-input" id="authPassword" type="password" placeholder="Password"
+              autocomplete="current-password">
+            <div class="auth-actions">
+              <button class="auth-btn" id="loginBtn" type="button">Login</button>
+              <button class="auth-btn secondary" id="signupBtn" type="button">Sign up</button>
+            </div>
+          </div>
+          <div class="profile-form" id="profileForm">
+            <div class="profile-grid">
+              <input class="auth-input profile-wide" id="profileUsername" type="text"
+                placeholder="Username (unique, lowercase)" autocomplete="nickname">
+              <select class="auth-input" id="profileDept" aria-label="Department">
+                <option value="">Dept</option>
+                <option value="CSE">CSE</option>
+                <option value="CSBS">CSBS</option>
+                <option value="MCTR">MCTR</option>
+                <option value="IT">IT</option>
+                <option value="AIDS">AIDS</option>
+                <option value="CCE">CCE</option>
+                <option value="BME">BME</option>
+                <option value="BPT">BPT</option>
+                <option value="EEE">EEE</option>
+                <option value="ICE">ICE</option>
+                <option value="CE">CE</option>
+                <option value="ME">ME</option>
+              </select>
+              <select class="auth-input" id="profileYear" aria-label="Year">
+                <option value="">Year</option>
+                <option value="I">I</option>
+                <option value="II">II</option>
+                <option value="III">III</option>
+                <option value="IV">IV</option>
+              </select>
+              <select class="auth-input" id="profileSem" aria-label="Semester">
+                <option value="">Sem</option>
+                <option value="I">I</option>
+                <option value="II">II</option>
+                <option value="III">III</option>
+                <option value="IV">IV</option>
+                <option value="V">V</option>
+                <option value="VI">VI</option>
+                <option value="VII">VII</option>
+                <option value="VIII">VIII</option>
+              </select>
+              <select class="auth-input" id="profileRole">
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+              </select>
+
+            </div>
+            <div class="auth-actions">
+              <button class="auth-btn" id="saveProfileBtn" type="button">Save profile</button>
+              <button class="auth-btn secondary" id="logoutBtn" type="button">Logout</button>
+            </div>
+          </div>
+          <div class="settings-hint" id="syncHint">Login to save and sync your timetable</div>
+        </div>
+
+        <div class="profile-card">
+          <div class="profile-card-title">Preferences</div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <div class="setting-name">Dark mode</div>
+              <div class="setting-desc">Smooth premium theme</div>
+            </div>
+            <button class="toggle" id="themeToggle" type="button" aria-label="Toggle theme">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <div class="setting-name">Vibrate</div>
+              <div class="setting-desc">Double vibration on period change</div>
+            </div>
+            <button class="toggle" id="vibrateToggle" type="button" aria-label="Toggle vibration">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <div class="setting-name">Notifications</div>
+              <div class="setting-desc">Notify on period change</div>
+            </div>
+            <button class="toggle" id="notifyToggle" type="button" aria-label="Toggle notifications">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <div class="setting-name">Edit periods</div>
+              <div class="setting-desc">Tap a subject cell to rename it</div>
+            </div>
+            <button class="toggle" id="editToggle" type="button" aria-label="Toggle edit periods">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-card">
+          <div class="profile-card-title">Class Tools</div>
           <div class="auth-actions">
-            <button class="auth-btn" id="loginBtn" type="button">Login</button>
-            <button class="auth-btn secondary" id="signupBtn" type="button">Sign up</button>
+            <button class="auth-btn secondary" id="publishClassBtn" type="button">Publish Timetable</button>
           </div>
         </div>
-        <div class="profile-form" id="profileForm">
-          <div class="profile-grid">
-            <input class="auth-input profile-wide" id="profileUsername" type="text" placeholder="Username (unique, lowercase)" autocomplete="nickname">
-            <select class="auth-input" id="profileDept" aria-label="Department">
-              <option value="">Dept</option>
-              <option value="CSE">CSE</option>
-              <option value="CSBS">CSBS</option>
-              <option value="MCTR">MCTR</option>
-              <option value="IT">IT</option>
-              <option value="AIDS">AIDS</option>
-              <option value="CCE">CCE</option>
-              <option value="BME">BME</option>
-              <option value="BPT">BPT</option>
-              <option value="EEE">EEE</option>
-              <option value="ICE">ICE</option>
-              <option value="CE">CE</option>
-              <option value="ME">ME</option>
-            </select>
-            <select class="auth-input" id="profileYear" aria-label="Year">
-              <option value="">Year</option>
-              <option value="I">I</option>
-              <option value="II">II</option>
-              <option value="III">III</option>
-              <option value="IV">IV</option>
-            </select>
-            <select class="auth-input" id="profileSem" aria-label="Semester">
-              <option value="">Sem</option>
-              <option value="I">I</option>
-              <option value="II">II</option>
-              <option value="III">III</option>
-              <option value="IV">IV</option>
-              <option value="V">V</option>
-              <option value="VI">VI</option>
-              <option value="VII">VII</option>
-              <option value="VIII">VIII</option>
-            </select>
-            <select class="auth-input" id="profileRole">
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
-            </select>
-           
-          </div>
+
+        <div class="profile-card">
+          <div class="profile-card-title">Support Developer</div>
+          <!-- <div class="settings-hint">Login to save and sync your timetable</div> -->
           <div class="auth-actions">
-            <button class="auth-btn" id="saveProfileBtn" type="button">Save profile</button>
-            <button class="auth-btn secondary" id="logoutBtn" type="button">Logout</button>
+            <!-- <button class="auth-btn" id="savePersonalBtn" type="button">Save personal</button> -->
+            <!-- Place this tag where you want the button to render. -->
+            <a class="github-button" href="https://github.com/vaagishwar/TimetableTimer"
+              data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-star"
+              data-size="large" aria-label="Star vaagishwar/TimetableTimer on GitHub">Star</a>
+            <!-- Place this tag in your head or just before your close body tag. -->
+
+            <!-- <button class="auth-btn secondary" id="viewStudentsBtn" type="button">View students</button> -->
           </div>
         </div>
-         <div class="settings-hint" id="syncHint">Login to save and sync your timetable</div>
-      </div>
+      </section>
+    </main>
 
-      <div class="profile-card">
-        <div class="profile-card-title">Preferences</div>
-        <div class="setting-row">
-          <div class="setting-text">
-            <div class="setting-name">Dark mode</div>
-            <div class="setting-desc">Smooth premium theme</div>
-          </div>
-          <button class="toggle" id="themeToggle" type="button" aria-label="Toggle theme">
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </button>
-        </div>
-        <div class="setting-row">
-          <div class="setting-text">
-            <div class="setting-name">Vibrate</div>
-            <div class="setting-desc">Double vibration on period change</div>
-          </div>
-          <button class="toggle" id="vibrateToggle" type="button" aria-label="Toggle vibration">
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </button>
-        </div>
-        <div class="setting-row">
-          <div class="setting-text">
-            <div class="setting-name">Notifications</div>
-            <div class="setting-desc">Notify on period change</div>
-          </div>
-          <button class="toggle" id="notifyToggle" type="button" aria-label="Toggle notifications">
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </button>
-        </div>
-        <div class="setting-row">
-          <div class="setting-text">
-            <div class="setting-name">Edit periods</div>
-            <div class="setting-desc">Tap a subject cell to rename it</div>
-          </div>
-          <button class="toggle" id="editToggle" type="button" aria-label="Toggle edit periods">
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </button>
-        </div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Class Tools</div>
-        <div class="auth-actions">
-          <button class="auth-btn secondary" id="publishClassBtn" type="button">Publish Timetable</button>
-        </div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Support Developer</div>
-        <!-- <div class="settings-hint">Login to save and sync your timetable</div> -->
-        <div class="auth-actions">
-          <!-- <button class="auth-btn" id="savePersonalBtn" type="button">Save personal</button> -->
-          <!-- Place this tag where you want the button to render. -->
-<a class="github-button" href="https://github.com/vaagishwar/TimetableTimer" data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-star" data-size="large" aria-label="Star vaagishwar/TimetableTimer on GitHub">Star</a>
-<!-- Place this tag in your head or just before your close body tag. -->
-
-          <!-- <button class="auth-btn secondary" id="viewStudentsBtn" type="button">View students</button> -->
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <nav class="tabbar" aria-label="Primary">
-    <button class="tab-btn active" id="tabBtnHome" type="button" data-tab="tabHome" aria-label="Home">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3l9 8h-3v10h-5v-6H11v6H6V11H3z"/></svg>
-      <span class="sr-only">Home</span>
-    </button>
-    <button class="tab-btn" id="tabBtnExplore" type="button" data-tab="tabExplore" aria-label="Search">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.5 3a7.5 7.5 0 015.9 12l4.3 4.3-1.4 1.4-4.3-4.3a7.5 7.5 0 11-4.5-13.4zm0 2a5.5 5.5 0 100 11 5.5 5.5 0 000-11z"/></svg>
-      <span class="sr-only">Search</span>
-    </button>
-    <button class="tab-btn" id="tabBtnProfile" type="button" data-tab="tabProfile" aria-label="Profile">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a6 6 0 016 6 6 6 0 01-1.7 4.2A7.99 7.99 0 0120 20H18a6 6 0 00-12 0H4a7.99 7.99 0 013.7-7.8A6 6 0 0112 2zm0 2a4 4 0 100 8 4 4 0 000-8z"/></svg>
-      <span class="sr-only">Profile</span>
-    </button>
-  </nav>
-</div>
-
-<section class="students-sheet" id="studentsScreen" aria-hidden="true">
-  <div class="students-topbar">
-    <button class="students-back" id="studentsBack" type="button" aria-label="Back">Back</button>
-    <div class="students-title">Students</div>
-    <button class="students-refresh" id="studentsRefresh" type="button" aria-label="Refresh students">Refresh</button>
+    <nav class="tabbar" aria-label="Primary">
+      <button class="tab-btn active" id="tabBtnHome" type="button" data-tab="tabHome" aria-label="Home">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M12 3l9 8h-3v10h-5v-6H11v6H6V11H3z" />
+        </svg>
+        <span class="sr-only">Home</span>
+      </button>
+      <button class="tab-btn" id="tabBtnExplore" type="button" data-tab="tabExplore" aria-label="Search">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor"
+            d="M10.5 3a7.5 7.5 0 015.9 12l4.3 4.3-1.4 1.4-4.3-4.3a7.5 7.5 0 11-4.5-13.4zm0 2a5.5 5.5 0 100 11 5.5 5.5 0 000-11z" />
+        </svg>
+        <span class="sr-only">Search</span>
+      </button>
+      <button class="tab-btn" id="tabBtnProfile" type="button" data-tab="tabProfile" aria-label="Profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor"
+            d="M12 2a6 6 0 016 6 6 6 0 01-1.7 4.2A7.99 7.99 0 0120 20H18a6 6 0 00-12 0H4a7.99 7.99 0 013.7-7.8A6 6 0 0112 2zm0 2a4 4 0 100 8 4 4 0 000-8z" />
+        </svg>
+        <span class="sr-only">Profile</span>
+      </button>
+    </nav>
   </div>
-  <div class="students-controls">
-    <input class="students-search" id="studentsSearch" type="search" placeholder="Search username" autocomplete="off">
-    <select class="students-sort" id="studentsSort" aria-label="Sort students">
-      <option value="recent">Recent</option>
-      <option value="name">Name</option>
-    </select>
-  </div>
-  <div class="students-meta" id="studentsMeta">--</div>
-  <div class="students-list" id="studentsList"></div>
-</section>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-<script src="script.js"></script>
+  <section class="students-sheet" id="studentsScreen" aria-hidden="true">
+    <div class="students-topbar">
+      <button class="students-back" id="studentsBack" type="button" aria-label="Back">Back</button>
+      <div class="students-title">Students</div>
+      <button class="students-refresh" id="studentsRefresh" type="button" aria-label="Refresh students">Refresh</button>
+    </div>
+    <div class="students-controls">
+      <input class="students-search" id="studentsSearch" type="search" placeholder="Search username" autocomplete="off">
+      <select class="students-sort" id="studentsSort" aria-label="Sort students">
+        <option value="recent">Recent</option>
+        <option value="name">Name</option>
+      </select>
+    </div>
+    <div class="students-meta" id="studentsMeta">--</div>
+    <div class="students-list" id="studentsList"></div>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="script.js"></script>
 </body>
+
 </html>

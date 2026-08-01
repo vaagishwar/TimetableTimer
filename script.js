@@ -1,5 +1,15 @@
 const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const cat = document.getElementById("cat");
 
+cat.onload = () => {
+    cat.classList.add("loaded");
+};
+
+cat.onerror = () => {
+    console.error("Failed to load cat_lofi.webp");
+    // Optional fallback
+    // cat.src = "./assets/fallback.png";
+};
 const timesDefault = [
   ["09:00","09:50"],
   ["09:50","10:40"],
@@ -1023,7 +1033,7 @@ function updateUI() {
   const currentSub = document.getElementById("currentSub");
   const periodMeta = document.getElementById("periodMeta");
   const progressFill = document.getElementById("progressFill");
-  const progressMeta = document.getElementById("progressMeta");
+  // const progressMeta = document.getElementById("progressMeta");
 
   clock.textContent = formatClock(now);
 
@@ -1033,7 +1043,7 @@ function updateUI() {
     currentSub.textContent = "--";
     periodMeta.textContent = "--";
     progressFill.style.width = "0%";
-    progressMeta.textContent = "Outside class hours";
+    // progressMeta.textContent = "Outside class hours";
     if (activeKey) {
       const prev = cellMap.get(activeKey);
       if (prev) prev.classList.remove("active", "break");
@@ -1095,9 +1105,9 @@ function updateUI() {
   currentSub.textContent = `${days[dayIndex]} • ${periodTag}`;
   periodMeta.textContent = `${formatRange(start, end)} • ${durationText(start, end)}`;
   progressFill.style.width = `${percent.toFixed(2)}%`;
-  const elapsedMin = Math.floor(elapsed);
+  // const elapsedMin = Math.floor(elapsed);
   const next = nextUp(dayIndex, periodIndex);
-  progressMeta.textContent = `${elapsedMin}m elapsed • ${remainingMin}m left${next ? ` • Next: ${next}` : ""}`;
+  // progressMeta.textContent = `${remainingMin}m left${next ? ` Next: ${next}` : ""}`;
 }
 
 function onPeriodBoundary(dayIndex, periodIndex, subject) {
